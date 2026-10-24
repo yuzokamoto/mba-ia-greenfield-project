@@ -142,6 +142,11 @@ Never edit the generated files (`AGENTS.md`, `.agents/skills/`, `.codex/agents/`
 "read `CLAUDE.md`", the sibling `AGENTS.md` has the same content. When a skill or task says "update `CLAUDE.md`",
 edit the `CLAUDE.md` file and regenerate, so both stay identical.
 
+**Language of artifacts.** Everything written to the repository — decisions docs, phase/task artifacts under `docs/`,
+code, comments, commit-ready text — follows the existing project convention: English, keeping Portuguese only for
+verbatim quotes of `docs/project-plan.md` (capability bullets, phase names). This overrides any personal or global
+language preference. Chat replies to the user may use the user's language.
+
 ### Tool mapping (Claude Code names used inside skills and agents → Codex)
 
 - `/<skill>` or "use the Skill tool to load `<skill>`" → mention `$<skill>` or read `.agents/skills/<skill>/SKILL.md`
