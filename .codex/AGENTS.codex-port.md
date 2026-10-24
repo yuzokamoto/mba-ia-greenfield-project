@@ -15,8 +15,10 @@ tool runtime changes.
 | `.claude/settings.json` `UserPromptSubmit` hook | `.codex/hooks.json` (same hook; Codex runs project hooks only after they are reviewed and trusted in the TUI) | hand-maintained |
 
 Codex loads `.codex/config.toml`, `.codex/agents/` and `.codex/hooks.json` only for trusted projects
-(`[projects."<absolute repo path>"] trust_level = "trusted"` in `~/.codex/config.toml`). MCP tools may be deferred:
-search the available tools for `context7` / `postgres` before concluding they are missing.
+(`[projects."<absolute repo path>"] trust_level = "trusted"` in `~/.codex/config.toml`). MCP tools are not listed as
+top-level functions: they live in the code-mode tool catalog of the `exec` tool. Find them with
+`ALL_TOOLS.filter(t => /context7|postgres/i.test(t.name))` and call them from there (`list_mcp_resources` only lists
+resources, not tools). Use the context7 MCP tools for documentation lookups instead of raw HTTP calls.
 
 **Subproject instructions.** Codex only auto-loads the `AGENTS.md` files from the repository root down to the current
 working directory. Before working on files under `nestjs-project/` or `next-frontend/` from another directory, read
