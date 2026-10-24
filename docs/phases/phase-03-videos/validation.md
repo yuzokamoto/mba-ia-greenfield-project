@@ -1,12 +1,12 @@
 ---
 kind: phase
 name: phase-03-videos
-status: dirty
+status: clean
 issue_count: 0
 sources_mtime:
-  docs/phases/phase-03-videos/context.md: "2026-10-24T18:01:26.203639670-03:00"
-  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T17:59:18.968343732-03:00"
-  docs/phases/phase-03-videos/library-refs.md: "2026-10-24T18:01:25.694654487-03:00"
+  docs/phases/phase-03-videos/context.md: "2026-10-24T21:01:26.203639670+00:00"
+  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T20:59:18.968343732+00:00"
+  docs/phases/phase-03-videos/library-refs.md: "2026-10-24T21:01:25.694654487+00:00"
   docs/project-plan.md: "2026-10-24T19:02:23.437728100+00:00"
   docs/phases/phase-01-configuracao-base/context.md: "2026-10-24T19:02:23.435272571+00:00"
   docs/phases/phase-02-auth/context.md: "2026-10-24T19:02:23.436274942+00:00"
@@ -88,17 +88,21 @@ advisories: []
 
 ## Findings
 
-Second resolve cycle: **3 issues resolved, 0 open issues**. All 13 current TD choices and all 14 previously resolved issues are preserved. IC-1 and IC-2 were applied as context/prose clarifications retaining the existing decisions; AMB-2 was applied as parameter-level Revisions to TD-10/B and TD-11/A. The frontmatter remains `status: dirty`: only a new `/plan-validate phase-03-videos` run can reconfirm the verdict.
+Re-validation verdict: **clean — 0 open issues**. All applicable coherence checks pass against the current planning artifacts. All 13 TDs remain decided, and all 17 resolved issues retain their IDs, summaries, resolution references, and audit entries. No new inconsistency, ambiguity, missing decision, dependency gap, or inherited-constraint conflict was found.
 
-The preceding validation review compared the decided TDs and their controlling Notes with each other, `context.md`, `library-refs.md`, inherited decisions/conventions, and `docs/project-plan.md`. Context source timestamps match the recorded values. All 13 current Notes are reproduced in the resolved decision parameters. Their explicit precedence resolves the historical Recommendation differences concerning outbox, generations, reprocessing, session replacement, and decimal versus binary size limits; those differences alone are not findings.
+This review compared the decided TDs, controlling Notes, and latest Revisions with each other, `context.md`, `library-refs.md`, inherited decisions/conventions, and `docs/project-plan.md`. Context source timestamps match the recorded values exactly. All 13 current Notes and both latest Revisions are reproduced in context. Explicit precedence resolves the historical Recommendation differences concerning outbox, generations, reprocessing, session replacement, and decimal versus binary size limits. The latest Revisions expressly govern the earlier expiry wording; that documented refinement is not a contradiction.
 
 ### Inconsistencies
 
-_None open. IC-1 and IC-2 are recorded under Resolved Issues._
+_None._
+
+IC-1 is verified resolved: `context.md:237,281` restores the controlling custom-guard and JWT refresh-token Notes from Phase 02. IC-2 is verified resolved: `docs/decisions/technical-decisions-phase-03-videos.md:570–578` now verifies video-row durable intent, enqueue recovery after commit, duplicate delivery, and worker recovery for one immutable source. These contracts no longer require an outbox commit or processing generations. The current decisions, context, and verification prose agree.
 
 ### Ambiguities
 
-_None open. AMB-2 is recorded under Resolved Issues._
+_None._
+
+AMB-2 is verified resolved by the TD-10/TD-11 Revisions (`docs/decisions/technical-decisions-phase-03-videos.md:447–451,487–491`; `context.md:76,174–189`). After `expires_at`, the reconciler inspects the known object for an `active` session without requiring another client request. Matching size commits session `completed` and video `processing`, followed by deterministic enqueue; mismatch or absence has explicit cleanup and expiry/error handling. Completion and reconciliation serialize on the session row and transition only from `active`. The approved 24-hour recovery decision point adds no latency SLA, replacement session, generation, outbox, or database lease.
 
 ### Missing Decisions
 
@@ -128,7 +132,7 @@ Owner-only access to ready videos does not publish drafts or bring forward Phase
 
 _None._
 
-All 13 TDs have a Decision and a controlling Note. OQ-1 through OQ-13 remain resolved; the new recovery clarification is classified as AMB-2, not duplicated as an open question.
+All 13 TDs have a Decision and a controlling Note. OQ-1 through OQ-13 remain resolved. The AMB-2 refinement is recorded in both affected TDs and in context; no additional pending decision or unresolved carried question remains.
 
 ### UI Coverage Gaps
 
@@ -174,6 +178,6 @@ The user explicitly deferred `next-frontend/`; no screen inventory or UI coverag
 
 ## Review Boundaries and Next Step
 
-This resolve cycle applied the supplied Pass 1 answers to the current decisions document, Phase 03 context, and validation record, and refreshed the library cache source fingerprint. No prior-phase artifact, inventory, source code, or dependency manifest was edited. No tests, Docker commands, npm commands, Git state changes, or Context7 calls were run in this cycle. Existing library references were sufficient; the 10 GiB rehearsal and runtime verification remain implementation work.
+This was a read-only review of upstream artifacts. Only `docs/phases/phase-03-videos/validation.md` was written. No tests, Docker commands, npm commands, Git state changes, or Context7 calls were run. Existing library references were sufficient for this review; package/image verification was not repeated. The clean verdict confirms planning coherence, not runtime behavior. The 10 GiB rehearsal and runtime verification remain implementation work.
 
-Run `/plan-validate phase-03-videos` to reconfirm status before building. Proceed to `/plan-build phase-03-videos` only after validation reports `status: clean`.
+Validation reports `status: clean`. Run `/plan-build phase-03-videos` next.
