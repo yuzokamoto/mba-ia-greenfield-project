@@ -4,21 +4,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
-import appConfig from './config/app.config';
-import authConfig from './config/auth.config';
 import databaseConfig from './config/database.config';
-import mailConfig from './config/mail.config';
-import swaggerConfig from './config/swagger.config';
-import { envValidationSchema } from './config/env.validation';
+import { runtimeConfigOptions } from './config/runtime-config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [appConfig, authConfig, databaseConfig, mailConfig, swaggerConfig],
-      validationSchema: envValidationSchema,
-      validationOptions: { allowUnknown: true, abortEarly: false },
-    }),
+    ConfigModule.forRoot(runtimeConfigOptions),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [databaseConfig.KEY],
