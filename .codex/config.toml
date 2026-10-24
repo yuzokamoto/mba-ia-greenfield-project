@@ -1,0 +1,18 @@
+# Project-scoped Codex config (loaded only when the project is trusted).
+# Codex port of the Claude Code MCP setup (.mcp.json + context7). See AGENTS.md → "Codex port of the AI foundation".
+
+# Root AGENTS.md + next-frontend/AGENTS.md exceed the 32 KiB default when working inside next-frontend/.
+project_doc_max_bytes = 65536
+
+# Same server and connection string as .mcp.json (PostgreSQL published by nestjs-project/compose.yaml on the host).
+[mcp_servers.postgres]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-postgres", "postgresql://streamtube:streamtube@localhost/streamtube"]
+startup_timeout_sec = 60
+
+# Library documentation lookup required by CLAUDE.md → "Library Documentation Lookup".
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+startup_timeout_sec = 60
+tool_timeout_sec = 120
