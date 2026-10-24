@@ -258,7 +258,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Wire the first video control endpoint to the tested initiation service with inherited authentication and validation.
 
 **Route:** POST /videos/uploads
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-uploads.plan.md`
 **Authorization:** Authenticated user's own channel, per Authorization Matrix.
 
 **Technical actions:**
@@ -312,7 +312,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Make the reviewed signing contract available as an owner-authenticated JSON operation.
 
 **Route:** POST /videos/:publicId/upload/parts
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-parts-sign.plan.md`
 **Authorization:** Owner only; active, unexpired session.
 
 **Technical actions:**
@@ -337,7 +337,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Return the verified storage inventory needed to resume the existing upload session.
 
 **Route:** GET /videos/:publicId/upload/parts
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-parts-list.plan.md`
 **Authorization:** Owner only; active, unexpired session.
 
 **Technical actions:**
@@ -393,7 +393,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Provide the asynchronous completion HTTP contract over the serialized, independently tested finalization path.
 
 **Route:** POST /videos/:publicId/upload/complete
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-complete.plan.md`
 **Authorization:** Owner only; session rules and repeated-completion policy from Authorization Matrix.
 
 **Technical actions:**
@@ -450,7 +450,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Give the owner the specified cancellation operation without creating replacement-session or deletion behavior.
 
 **Route:** POST /videos/:publicId/upload/abort
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-upload-abort.plan.md`
 **Authorization:** Owner only; completed sessions conflict, already-aborted/expired sessions are idempotent.
 
 **Technical actions:**
@@ -593,7 +593,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Expose the stable public-ID lookup and owner-visible upload/processing status.
 
 **Route:** GET /videos/:publicId
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-detail.plan.md`
 **Authorization:** Owner only, in every lifecycle state.
 
 **Technical actions:**
@@ -618,7 +618,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Return the authenticated user's video collection through the selected private listing contract.
 
 **Route:** GET /videos
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-list.plan.md`
 **Authorization:** Authenticated; the query always restricts rows through `channel.user_id = user.sub`.
 
 **Technical actions:**
@@ -670,7 +670,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Offer authorized streaming access through an expiring JSON URL response.
 
 **Route:** GET /videos/:publicId/playback-url
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-playback-url.plan.md`
 **Authorization:** Owner only; video must be `ready`.
 
 **Technical actions:**
@@ -695,7 +695,7 @@ Deliver backend storage and background processing for resumable video uploads up
 **Description:** Offer owner-authorized original-file downloads with the approved attachment behavior.
 
 **Route:** GET /videos/:publicId/download-url
-**Test Specs:** _pending /plan-test-specs_
+**Test Specs:** see `nestjs-project/specs/videos-download-url.plan.md`
 **Authorization:** Owner only; video must be `ready`.
 
 **Technical actions:**
