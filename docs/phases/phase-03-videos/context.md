@@ -3,7 +3,8 @@ kind: phase
 name: phase-03-videos
 sources_mtime:
   docs/project-plan.md: "2026-10-24T19:02:23.437728100+00:00"
-  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T19:34:50.850620550+00:00"
+  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T17:43:56.498169952-03:00"
+  docs/phases/phase-03-videos/library-refs.md: "2026-10-24T17:47:02.153771915-03:00"
   docs/decisions/technical-decisions-openapi-docs-nestjs.md: "2026-10-24T19:02:23.432154661+00:00"
   docs/phases/phase-01-configuracao-base/context.md: "2026-10-24T19:02:23.435272571+00:00"
   docs/phases/phase-02-auth/context.md: "2026-10-24T19:02:23.436274942+00:00"
@@ -31,7 +32,7 @@ sources_mtime:
 
 **Out of scope:** `next-frontend/` — deferred by explicit user decision; backend-only phase with no UI scope.
 
-**Deliverables:** upload de até 10GB funcional, processamento automático do vídeo, streaming funcionando, URLs únicas geradas.
+**Deliverables:** functional uploads up to the TD-12 limit, automatic video processing, working streaming, and unique video URLs.
 
 **Affected subprojects:**
 
@@ -39,7 +40,7 @@ sources_mtime:
 
 **Deferred subprojects:** `next-frontend`
 
-**Sequencing notes:** Depende de: Fase 01, Fase 02
+**Sequencing notes:** Depends on Phases 01 and 02.
 
 **Neighbors (for boundary detection only):**
 
@@ -50,23 +51,55 @@ sources_mtime:
 
 | Ref | Source | Scope | Topic | Status | Decision | Libraries |
 |-----|--------|-------|-------|--------|----------|-----------|
-| phase-03-videos/TD-01 | phase | Backend | Processing Queue Technology | pending | — | Proposed: @nestjs/bullmq 12.0.0, bullmq 6.4.2, ioredis 6.0.0, Redis; alternatives: pg-boss 12.38.0, amqplib 2.2.0; existing pg |
-| phase-03-videos/TD-02 | phase | Backend | Large, Resumable Upload Protocol | pending | — | Proposed: @aws-sdk/client-s3, @aws-sdk/s3-request-presigner v3; alternatives: @tus/server, @tus/s3-store |
-| phase-03-videos/TD-03 | phase | Backend | S3 Bucket and Key Organization | pending | — | Proposed: @aws-sdk/client-s3, @aws-sdk/s3-request-presigner v3; inherited @nestjs/config, Joi |
-| phase-03-videos/TD-04 | phase | Backend | Video Worker Execution and Boundary | pending | — | NestJS 11.1.16, TD-01 dependencies, node:child_process |
-| phase-03-videos/TD-05 | phase | Backend | Media Access for Metadata and Thumbnail Extraction | pending | — | FFmpeg, ffprobe, node:stream, node:fs, node:child_process, S3 SDK v3 |
-| phase-03-videos/TD-06 | phase | Backend | Playable Format and Processing Scope | pending | — | FFmpeg, ffprobe |
-| phase-03-videos/TD-07 | phase | Backend | Short, Stable, Conflict-Free URL | pending | — | node:crypto, TypeORM 0.3.28, PostgreSQL 17 |
-| phase-03-videos/TD-08 | phase | Backend | Streaming and Download Delivery | pending | — | S3 SDK v3, presigner; alternative proxy: Node/Express streams |
-| phase-03-videos/TD-09 | phase | Backend | Processing Lifecycle and Failure Policy | pending | — | TypeORM 0.3.28, TD-01 queue |
-| phase-03-videos/TD-10 | phase | Backend | Consistency Across S3 Completion, Database, and Queue | pending | — | TypeORM 0.3.28, PostgreSQL 17, selected queue |
-| phase-03-videos/TD-11 | phase | Backend | Draft Persistence, Resumable Session, and Ownership | pending | — | TypeORM 0.3.28, PostgreSQL 17, S3 SDK v3 |
-| phase-03-videos/TD-12 | phase | Backend | Operational Limits, Expiration, and Upload Cleanup | pending | — | S3 SDK v3, inherited ConfigModule/Joi, TD-10 reconciliation mechanism |
-| phase-03-videos/TD-13 | phase | Repo-wide | Compose Infrastructure and Real Upload/Processing Tests | pending | — | Existing Docker Compose, Jest 30.3.0, ts-jest 29.4.6, Supertest 7.2.2, S3 SDK, selected queue |
+| phase-03-videos/TD-01 | phase | Backend | Processing Queue Technology | decided | A (BullMQ + Redis) | @nestjs/bullmq, bullmq |
+| phase-03-videos/TD-02 | phase | Backend | Large, Resumable Upload Protocol | decided | A (S3 multipart with presigned part URLs) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner |
+| phase-03-videos/TD-03 | phase | Backend | S3 Bucket and Key Organization | decided | A (one private bucket per environment, immutable per-video prefixes) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, @nestjs/config, joi |
+| phase-03-videos/TD-04 | phase | Backend | Video Worker Execution and Boundary | decided | A (Nest standalone application context in a separate video-worker container) | @nestjs/core, @nestjs/bullmq, bullmq |
+| phase-03-videos/TD-05 | phase | Backend | Media Access for Metadata and Thumbnail Extraction | decided | B (seekable remote read via HTTP Range) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner |
+| phase-03-videos/TD-06 | phase | Backend | Playable Format and Processing Scope | decided | D (stream the original object as uploaded) | — |
+| phase-03-videos/TD-07 | phase | Backend | Short, Stable, Conflict-Free URL | decided | A (random 12-char base64url public id + UNIQUE) | typeorm, pg |
+| phase-03-videos/TD-08 | phase | Backend | Streaming and Download Delivery | decided | A (presigned GET served by the storage) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner |
+| phase-03-videos/TD-09 | phase | Backend | Processing Lifecycle and Failure Policy | decided | A (draft → processing → ready or error, attempts tracked separately) | typeorm, bullmq |
+| phase-03-videos/TD-10 | phase | Backend | Consistency Across S3 Completion, Database, and Queue | decided | B (video row as the durable intent + reconciler, no outbox table) | typeorm, pg, bullmq |
+| phase-03-videos/TD-11 | phase | Backend | Draft Persistence, Resumable Session, and Ownership | decided | A (Video + UploadSession) | typeorm, pg, @aws-sdk/client-s3 |
+| phase-03-videos/TD-12 | phase | Backend | Operational Limits, Expiration, and Upload Cleanup | decided | A (24h session window, short renewable part URLs, reconciler cleanup) | @aws-sdk/client-s3, @nestjs/config, joi |
+| phase-03-videos/TD-13 | phase | Repo-wide | Compose Infrastructure and Real Upload/Processing Tests | decided | A (extend nestjs-project/compose.yaml) | jest, ts-jest, supertest |
 
 _Source files:_
 
 - phase-03-videos — `docs/decisions/technical-decisions-phase-03-videos.md` (scope_type: phase, related_phases: [3])
+
+### Resolved decision parameters
+
+The supplied Pass 1 answers and their refinements below govern implementation. Research Options and Recommendations are preserved as written; where they differ, the selected Decision and Note take precedence. In particular, TD-10 selects B without an outbox, TD-12 uses 10 GiB, and TD-03/TD-11 do not introduce reprocessing, generations, source replacement, replacement sessions, or initiation idempotency keys. Library pins are documentation-only at this stage; manifests and lockfiles are unchanged.
+
+**TD-01 — A (BullMQ + Redis):** The official NestJS integration provides attempts, backoff, and concurrency while isolating queue load from the business database; TD-10 handles the dual-write gap. Enable Redis AOF persistence and `maxmemory-policy noeviction`; pin `redis:8.2.3-bookworm`. Pin `@nestjs/bullmq` to `12.0.0` and `bullmq` to `5.81.5`: the adapter accepts NestJS 11.1.16 and BullMQ 5. This BullMQ release includes its Redis driver transitively; no direct `ioredis` dependency is selected because application code need not import it. BullMQ 6.4.2 was checked but makes that driver an optional peer, which would require an explicit driver dependency. Exact pins and documentation-version discrepancies are recorded in `library-refs.md`.
+
+**TD-02 — A (S3 multipart with presigned part URLs):** Video bytes never pass through the API. Clients PUT parts directly to S3/MinIO, providing native per-part resumption without an additional gateway. Pin both AWS packages to `3.1156.0`.
+
+**TD-03 — A (one private bucket per environment, immutable per-video prefixes):** Use `videos/{videoId}/original` for the uploaded source and `videos/{videoId}/thumbnail.jpg`, with no `{sessionId}` or `{generation}` segments. Phase 03 has no reprocessing or source-replacement capability, TD-06/D creates no playback derivative, and TD-11 permits exactly one upload session per video; one source per video therefore suffices. This refinement takes precedence over the proposed layout in Option A. Configure the S3 client endpoint and `forcePathStyle` for MinIO, retaining inherited typed configuration and environment validation.
+
+**TD-04 — A (Nest standalone application context in a separate video-worker container):** Build the worker from the same `nestjs-project` image as the API, installing FFmpeg/ffprobe in that image. Its own entrypoint imports only required modules through `createApplicationContext`, opens no HTTP listener, and starts with concurrency 1. Use asynchronous `node:child_process` subprocesses without a shell, apply timeouts, and kill subprocesses on shutdown. The verified `node:25.6.0-slim` container uses Debian bookworm; the available package pin is `ffmpeg=7:5.1.9-0+deb12u1`, which supplies both binaries. No FFmpeg wrapper is selected.
+
+**TD-05 — B (seekable remote read via HTTP Range):** Give ffprobe/ffmpeg a short-lived presigned GET URL for the known object on the internal storage endpoint, never a user-supplied URL. Run ffprobe with JSON output, validate the result, extract one frame with input seeking, and upload the JPEG thumbnail; do not stage the entire source locally. Restrict media protocols to those needed for the controlled storage URL and prevent external references embedded in uploaded media from becoming arbitrary network access. This matches TD-06/D, which requires no playback derivative.
+
+**TD-06 — D (stream the original object as uploaded):** Accept any input that ffprobe parses with at least one video stream and a finite positive duration; anything else is a terminal `invalid_media` error. `ready` means metadata and thumbnail have been persisted and the original verified in storage. Browser codec support is a client concern, so expose detected container/codec metadata in the API. No playback derivative, remuxing, or transcoding is created; FFmpeg/ffprobe are native binaries pinned by TD-04/TD-13.
+
+**TD-07 — A (random 12-char base64url public id + UNIQUE):** Generate 9 bytes with `crypto.randomBytes` and encode them as 12 base64url characters. Enforce a UNIQUE constraint and allow at most 3 insert attempts on a public-ID unique violation, then return a 500-class error. The public ID is immutable. Native `node:crypto` requires no added package.
+
+**TD-08 — A (presigned GET served by the storage):** Only the owner, authenticated by JWT and verified through the video's channel, may request playback/download URLs in this phase, and only for a `ready` video. Playback is inline; download sets `Content-Disposition: attachment` with a sanitized filename. Expiry is configurable, and a presigned URL remains a bearer credential until expiration. Sign all client-facing URLs (upload parts, playback, download) against a configurable public storage endpoint; API/worker operations use the internal Compose endpoint `minio`. In tests both endpoints use the internal endpoint so e2e tests can fetch the signed URLs inside the container. Never rewrite the hostname after signing.
+
+**TD-09 — A (draft → processing → ready or error, attempts tracked separately):** Allow 3 attempts total with exponential backoff for transient failures. Invalid/unsupported media fails immediately without retry, under the acceptance policy in TD-06. Persist only a safe failure code (`invalid_media`, `processing_failed`, `upload_expired`) in the API-visible failure reason; internal diagnostics are bounded. TD-10 reconciliation recovers missing terminal updates rather than relying exclusively on event callbacks.
+
+**TD-10 — B (video row as the durable intent + reconciler, no outbox table):** A single pipeline and job type does not justify an outbox table and dispatcher. The `processing` status written in the completion transaction is the durable intent. Enqueue after commit with a deterministic `jobId` per video. A periodic reconciler in the worker re-enqueues videos stuck in `processing` without a live job, marks `error` when a job failed permanently but the row was not updated, and aborts expired upload sessions under TD-12. The processor is idempotent through deterministic keys and a conditional update only from `processing`; queue deduplication alone is insufficient after a job is removed. There is no generation counter or database lease requirement in this phase. This selected B policy takes precedence over the research recommendation of A.
+
+**TD-11 — A (Video + UploadSession):** Exactly one upload session per video is created together with the draft at upload start; there is no session replacement or initiation idempotency key in this phase. The reconciler aborts sessions that expire before completion and marks the video `error` with `upload_expired`. Every endpoint verifies ownership through `channel.user_id`; client-supplied bucket/key/uploadId never establishes authority. Reconcile repeated completion after a lost S3 response with `HeadObject` on the known key, serializing completion per session. Cross-check parts through paginated `ListParts` and complete only verified numbers/ETags. Keep SQL transactions short and never open during byte transfer. These parameters narrow the session replacement/reprocessing suggestions in the research text.
+
+**TD-12 — A (24h session window, short renewable part URLs, reconciler cleanup):** Maximum size is 10 GiB = 10,737,418,240 bytes, covering both readings of "10GB" because operating systems commonly display GiB as "GB". Use server-defined 64 MiB parts (at most 160 parts), a 24-hour session from creation, and 15-minute part URLs renewable while the session is active. Validate parts through `ListParts` before completion and final object size through `HeadObject` against the declared size; a mismatch causes abort/delete as applicable and `error`. Reconciler cleanup does not depend on bucket lifecycle rules, and expired sessions cannot be replaced under TD-11. These parameters override the proposed decimal limit and replacement-session behavior in the research text.
+
+The verifiable criterion for "without impacting performance" (AMB-1) is: (1) video bytes never pass through the API; it exchanges only small JSON control messages while clients PUT parts directly to storage through presigned URLs; (2) API memory use is independent of file size; (3) API control endpoints remain responsive during multipart upload, verified by an e2e test; and (4) a one-off controlled rehearsal transfers a real 10 GiB file through the multipart flow and records the environment, API memory observations, concurrent control requests, and outcome in `progress.md` during implementation. No latency SLA is added because none exists in `project-plan.md`.
+
+**TD-13 — A (extend nestjs-project/compose.yaml):** Add `minio`, a one-shot bucket-init service, `redis`, and `video-worker` to backend Compose. Pin Redis to `redis:8.2.3-bookworm` and the Docker Hub community MinIO build to `pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372`. This is the independent PGSTY MinIO fork, not an upstream MinIO, Inc. image: upstream Docker Hub tags returned 404/access denied and checked Quay tags were unavailable; the selected Docker Hub tag was verified by a successful pull. Its embedded `mcli` can initialize the bucket without adding an unverified `minio/mc` image. Both API and worker use the same image with `ffmpeg=7:5.1.9-0+deb12u1` on the verified bookworm base. See `library-refs.md` for provenance, exact pins, and verification evidence. Tests use a dedicated test bucket and queue name. Processing e2e tests run the processor against the test queue, independently of the development worker, and generate media with FFmpeg at test time; no binary fixtures are committed. Tests remain serialized against the shared test database.
 
 ## Capability Coverage
 
@@ -84,7 +117,70 @@ _Source files:_
 
 ## Decisions Detail
 
-_No decided TDs yet._
+### phase-03-videos/TD-01
+
+**Recommendation:** Nest integration and isolation of queue load favor this phase's worker, accepting an additional service and dual-write recovery in TD-10; B is a strong alternative if reducing services is the priority, with no scale evidence making Redis mandatory.
+**Libraries:** @nestjs/bullmq, bullmq
+
+### phase-03-videos/TD-02
+
+**Recommendation:** uses the mandatory storage and eliminates a transfer gateway, keeping persisted sessions, renewed signatures for missing parts, authorized completion/abort, and `ListParts` reconciliation in the backend as described in TD-11.
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
+
+### phase-03-videos/TD-03
+
+**Recommendation:** covers videos and thumbnails with less configuration, using AWS SDK v3 against both providers and granting individual access through signed URLs; bucket names are configurable per environment, and no expired URL is persisted as the video's identity.
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, @nestjs/config, joi
+
+### phase-03-videos/TD-04
+
+**Recommendation:** preserves existing domain services and configuration with resource isolation from the API; start with concurrency 1 per worker, CPU/memory/disk limits, timeouts, and subprocess termination on shutdown, increasing only after measurement.
+**Libraries:** @nestjs/core, @nestjs/bullmq, bullmq
+
+### phase-03-videos/TD-05
+
+**Recommendation:** with the recommended TD-06/D — avoids making a full 10GB local transfer a prerequisite for probe + thumbnail, accepting variable Range traffic and validating bounded reads/timeouts against the chosen storage and worker image; reconsider A if derivative generation is selected or measured remote access is inefficient, while retaining an in-duration frame with a start-frame fallback for short clips as an extraction heuristic rather than a product requirement.
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
+
+### phase-03-videos/TD-06
+
+**Recommendation:** best fits this phase's 10GB and storage-cost concerns without adding a normalized-playback requirement, avoiding an additional full-file preparation pass and copy while accepting client-dependent codec support and extra index-seek requests; expose detected container/codec metadata and verify startup/seeking on representative compatible clients, retaining A when predictable index placement and a restricted profile justify the extra copy, or B when broader normalized compatibility is required.
+**Libraries:** —
+
+### phase-03-videos/TD-07
+
+**Recommendation:** balances a short URL with generation without external coordination, bounded retries without overwriting, an immutable ID, and reservation retained even after future deletion; reservation failure returns an error instead of publishing a conflict.
+**Libraries:** typeorm, pg
+
+### phase-03-videos/TD-08
+
+**Recommendation:** follows the C4 and keeps bandwidth outside the API, issuing links only after access-policy and readiness checks, with configurable duration, authorized renewal, and download headers set in the signature; technical access in this phase belongs to the owner, without making a draft public because it is `ready`.
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
+
+### phase-03-videos/TD-09
+
+**Recommendation:** meets the requested lifecycle without bringing publication forward, proposing three total attempts with exponential backoff for transient failures, an immediate terminal error for invalid media or media incompatible with the selected processing policy, and `error` after exhaustion; authorized reprocessing opens a new generation, without infinite retries or regression of a generation already ready. Under TD-06/D, lack of codec support in a particular client alone is not a processing failure.
+**Libraries:** typeorm, bullmq
+
+### phase-03-videos/TD-10
+
+**Recommendation:** for TD-01/A — makes processing intent explicit, combining queue deduplication with conditional writes per generation and a database lease; redelivered or old jobs cannot overwrite current results, and reconciliation must also recover jobs lost after dispatcher confirmation.
+**Libraries:** typeorm, pg, bullmq
+
+### phase-03-videos/TD-11
+
+**Recommendation:** keeps identity and ownership in the video domain and resumption in the upload domain, with short transactions and `channel.user_id` checks on initiation, retrieval, signing, completion, abort, and reprocessing; no endpoint treats arbitrary bucket/key/uploadId values as authority, and drafts remain restricted to their owner.
+**Libraries:** typeorm, pg, @aws-sdk/client-s3
+
+### phase-03-videos/TD-12
+
+**Recommendation:** proposes interpreting 10GB as `10_000_000_000` bytes, 64MiB parts, and suggested consumer concurrency of four parts, validating expected size and actual size of every part before completion and final size before processing; oversized files are aborted/rejected without trusting client-declared MIME or size, and suggested concurrency is not a storage-enforced quota.
+**Libraries:** @aws-sdk/client-s3, @nestjs/config, joi
+
+### phase-03-videos/TD-13
+
+**Recommendation:** fits the adopted Docker environment without changing the frontend, with real PostgreSQL/MinIO/queue integration and real FFmpeg in the worker path; use unit tests for branches and deterministic failures, and integration/e2e tests for external contracts and recovery.
+**Libraries:** jest, ts-jest, supertest
 
 ## Inherited Decisions Detail
 

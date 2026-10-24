@@ -1,7 +1,7 @@
 ---
 scope_type: phase
 related_phases: [3]
-status: pending
+status: decided
 date: 2026-10-24
 scope_description: "Phase 03 backend: queue, resumable S3 multipart uploads up to 10GB, FFmpeg worker, storage, unique URLs, streaming, downloads, and failure recovery in Docker Compose."
 ---
@@ -104,9 +104,11 @@ Retains the BullMQ Queue/Worker API and selects `createPostgresBackend`. The [of
 
 **Recommendation:** **Option A (BullMQ + Redis)** — Nest integration and isolation of queue load favor this phase's worker, accepting an additional service and dual-write recovery in TD-10; B is a strong alternative if reducing services is the priority, with no scale evidence making Redis mandatory.
 
-**Decision:** _[pending]_
+**Decision:** A (BullMQ + Redis)
 
-**Libraries:** Proposed: `@nestjs/bullmq` 12.0.0, `bullmq` 6.4.2, `ioredis` 6.0.0; Redis with a pinned, compatible version/image. Alternatives: `pg-boss` 12.38.0 or `amqplib` 2.2.0; D uses BullMQ and the existing `pg`.
+**Note:** The official NestJS integration provides attempts, backoff, and concurrency while isolating queue load from the business database; TD-10 handles the dual-write gap. Enable Redis AOF persistence and `maxmemory-policy noeviction`; pin `redis:8.2.3-bookworm`. Pin `@nestjs/bullmq` to `12.0.0` and `bullmq` to `5.81.5`: the adapter accepts NestJS 11.1.16 and BullMQ 5. This BullMQ release includes its Redis driver transitively; no direct `ioredis` dependency is selected because application code need not import it. BullMQ 6.4.2 was checked but makes that driver an optional peer, which would require an explicit driver dependency. Exact pins and documentation-version discrepancies are recorded in `library-refs.md`.
+
+**Libraries:** @nestjs/bullmq, bullmq
 
 ---
 
@@ -136,9 +138,11 @@ A dedicated upload service receives PATCH/HEAD requests using the [tus](https://
 
 **Recommendation:** **Option A (presigned S3 multipart)** — uses the mandatory storage and eliminates a transfer gateway, keeping persisted sessions, renewed signatures for missing parts, authorized completion/abort, and `ListParts` reconciliation in the backend as described in TD-11.
 
-**Decision:** _[pending]_
+**Decision:** A (S3 multipart with presigned part URLs)
 
-**Libraries:** Proposed: `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` v3, on the same patch; alternative B: `@tus/server` and `@tus/s3-store`. No frontend library is selected.
+**Note:** Video bytes never pass through the API. Clients PUT parts directly to S3/MinIO, providing native per-part resumption without an additional gateway. Pin both AWS packages to `3.1156.0`.
+
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
 
 ---
 
@@ -168,9 +172,11 @@ Originals live in one bucket and playback/thumbnails in another, retaining keys 
 
 **Recommendation:** **Option A (private bucket + immutable prefixes)** — covers videos and thumbnails with less configuration, using AWS SDK v3 against both providers and granting individual access through signed URLs; bucket names are configurable per environment, and no expired URL is persisted as the video's identity.
 
-**Decision:** _[pending]_
+**Decision:** A (one private bucket per environment, immutable per-video prefixes)
 
-**Libraries:** Proposed: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` v3; inherited `@nestjs/config` and Joi. Configure `endpoint`/`forcePathStyle` for MinIO according to the [SDK v3 API](https://github.com/aws/aws-sdk-js-v3/blob/v3.1153.0/UPGRADING.md), without introducing a filesystem driver for development.
+**Note:** Use `videos/{videoId}/original` for the uploaded source and `videos/{videoId}/thumbnail.jpg`, with no `{sessionId}` or `{generation}` segments. Phase 03 has no reprocessing or source-replacement capability, TD-06/D creates no playback derivative, and TD-11 permits exactly one upload session per video; one source per video therefore suffices. This refinement takes precedence over the proposed layout in Option A. Configure the S3 client endpoint and `forcePathStyle` for MinIO, retaining inherited typed configuration and environment validation.
+
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner, @nestjs/config, joi
 
 ---
 
@@ -200,9 +206,11 @@ Maintains its own bootstrap, dependency composition, and build, consuming the qu
 
 **Recommendation:** **Option A (Nest standalone in a video-worker container)** — preserves existing domain services and configuration with resource isolation from the API; start with concurrency 1 per worker, CPU/memory/disk limits, timeouts, and subprocess termination on shutdown, increasing only after measurement.
 
-**Decision:** _[pending]_
+**Decision:** A (Nest standalone application context in a separate video-worker container)
 
-**Libraries:** NestJS 11.1.16 and TD-01 dependencies; `node:child_process` for asynchronous `spawn`/`execFile`, without passing user data through a shell. Sources: [standalone context](https://github.com/nestjs/docs.nestjs.com/blob/master/content/application-context.md), [Node 25.6.0 API](https://nodejs.org/download/release/v25.6.0/docs/api/child_process.html). `fluent-ffmpeg` is not a candidate: its [repository announces discontinuation](https://github.com/fluent-ffmpeg/node-fluent-ffmpeg).
+**Note:** Build the worker from the same `nestjs-project` image as the API, installing FFmpeg/ffprobe in that image. Its own entrypoint imports only required modules through `createApplicationContext`, opens no HTTP listener, and starts with concurrency 1. Use asynchronous `node:child_process` subprocesses without a shell, apply timeouts, and kill subprocesses on shutdown. The verified `node:25.6.0-slim` container uses Debian bookworm; the available package pin is `ffmpeg=7:5.1.9-0+deb12u1`, which supplies both binaries. No FFmpeg wrapper is selected.
+
+**Libraries:** @nestjs/core, @nestjs/bullmq, bullmq
 
 ---
 
@@ -232,9 +240,11 @@ FFmpeg/ffprobe read a restricted URL generated by the backend/worker for the kno
 
 **Recommendation:** **Option B (seekable remote reading)** with the recommended TD-06/D — avoids making a full 10GB local transfer a prerequisite for probe + thumbnail, accepting variable Range traffic and validating bounded reads/timeouts against the chosen storage and worker image; reconsider A if derivative generation is selected or measured remote access is inefficient, while retaining an in-duration frame with a start-frame fallback for short clips as an extraction heuristic rather than a product requirement.
 
-**Decision:** _[pending]_
+**Decision:** B (seekable remote read via HTTP Range)
 
-**Libraries:** Native FFmpeg and ffprobe, `node:stream`, `node:fs`, `node:child_process`, S3 SDK v3. Relevant JSON is validated before persisting finite/positive duration and metadata; allow only the protocols needed for controlled local files or backend-generated HTTP(S) storage URLs, never arbitrary user URLs or external media references embedded in uploaded files.
+**Note:** Give ffprobe/ffmpeg a short-lived presigned GET URL for the known object on the internal storage endpoint, never a user-supplied URL. Run ffprobe with JSON output, validate the result, extract one frame with input seeking, and upload the JPEG thumbnail; do not stage the entire source locally. Restrict media protocols to those needed for the controlled storage URL and prevent external references embedded in uploaded media from becoming arbitrary network access. This matches TD-06/D, which requires no playback derivative.
+
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
 
 ---
 
@@ -278,9 +288,11 @@ Use the uploaded original as the playback source, without a derived playback art
 
 **Recommendation:** **Option D (stream the unchanged original)** — best fits this phase's 10GB and storage-cost concerns without adding a normalized-playback requirement, avoiding an additional full-file preparation pass and copy while accepting client-dependent codec support and extra index-seek requests; expose detected container/codec metadata and verify startup/seeking on representative compatible clients, retaining A when predictable index placement and a restricted profile justify the extra copy, or B when broader normalized compatibility is required.
 
-**Decision:** _[pending]_
+**Decision:** D (stream the original object as uploaded)
 
-**Libraries:** Native FFmpeg/ffprobe. Choice A requires a prepared playback artifact; B would require compatible encoders in the image; C would require the HLS muxer; D needs only probe + thumbnail processing and TD-08's Range-capable delivery of the original. The API must document the selected processing/compatibility policy and detected formats without selecting a player or frontend library.
+**Note:** Accept any input that ffprobe parses with at least one video stream and a finite positive duration; anything else is a terminal `invalid_media` error. `ready` means metadata and thumbnail have been persisted and the original verified in storage. Browser codec support is a client concern, so expose detected container/codec metadata in the API. No playback derivative, remuxing, or transcoding is created; FFmpeg/ffprobe are native binaries pinned by TD-04/TD-13.
+
+**Libraries:** —
 
 ---
 
@@ -317,9 +329,11 @@ Reuses the persisted UUID as the logical identifier. The PK constraint prevents 
 
 **Recommendation:** **Option A (12-character random public ID + UNIQUE)** — balances a short URL with generation without external coordination, bounded retries without overwriting, an immutable ID, and reservation retained even after future deletion; reservation failure returns an error instead of publishing a conflict.
 
-**Decision:** _[pending]_
+**Decision:** A (random 12-char base64url public id + UNIQUE)
 
-**Libraries:** `node:crypto`, TypeORM 0.3.28, and PostgreSQL 17; no new dependency. Nano ID was researched but is unnecessary, and its latest 6.0.2 does not declare support for the current Node 25.
+**Note:** Generate 9 bytes with `crypto.randomBytes` and encode them as 12 base64url characters. Enforce a UNIQUE constraint and allow at most 3 insert attempts on a public-ID unique violation, then return a 500-class error. The public ID is immutable. Native `node:crypto` requires no added package.
+
+**Libraries:** typeorm, pg
 
 ---
 
@@ -349,9 +363,11 @@ The API authorizes and forwards Range to GetObject, streaming the result with ba
 
 **Recommendation:** **Option A (direct presigned GET)** — follows the C4 and keeps bandwidth outside the API, issuing links only after access-policy and readiness checks, with configurable duration, authorized renewal, and download headers set in the signature; technical access in this phase belongs to the owner, without making a draft public because it is `ready`.
 
-**Decision:** _[pending]_
+**Decision:** A (presigned GET served by the storage)
 
-**Libraries:** S3 SDK v3 and presigner; B's proxy would use existing Node/Express streams. [Presigned URLs are reusable until expiration](https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html); the public ID is not a credential, and authorization does not depend on keeping the object name secret.
+**Note:** Only the owner, authenticated by JWT and verified through the video's channel, may request playback/download URLs in this phase, and only for a `ready` video. Playback is inline; download sets `Content-Disposition: attachment` with a sanitized filename. Expiry is configurable, and a presigned URL remains a bearer credential until expiration. Sign all client-facing URLs (upload parts, playback, download) against a configurable public storage endpoint; API/worker operations use the internal Compose endpoint `minio`. In tests both endpoints use the internal endpoint so e2e tests can fetch the signed URLs inside the container. Never rewrite the hostname after signing.
+
+**Libraries:** @aws-sdk/client-s3, @aws-sdk/s3-request-presigner
 
 ---
 
@@ -381,9 +397,11 @@ Exposes `draft`, `uploading`, `uploaded`, `queued`, `probing`, `thumbnailing`, `
 
 **Recommendation:** **Option A (four persisted technical states)** — meets the requested lifecycle without bringing publication forward, proposing three total attempts with exponential backoff for transient failures, an immediate terminal error for invalid media or media incompatible with the selected processing policy, and `error` after exhaustion; authorized reprocessing opens a new generation, without infinite retries or regression of a generation already ready. Under TD-06/D, lack of codec support in a particular client alone is not a processing failure.
 
-**Decision:** _[pending]_
+**Decision:** A (draft → processing → ready or error, attempts tracked separately)
 
-**Libraries:** TypeORM 0.3.28 and the TD-01 queue; BullMQ provides [attempts/backoff](https://docs.bullmq.io/guide/retrying-failing-jobs). Persist a safe failure code and bounded internal diagnostics; dead/stalled worker reconciliation belongs to TD-10, without relying exclusively on an event callback to persist the final error.
+**Note:** Allow 3 attempts total with exponential backoff for transient failures. Invalid/unsupported media fails immediately without retry, under the acceptance policy in TD-06. Persist only a safe failure code (`invalid_media`, `processing_failed`, `upload_expired`) in the API-visible failure reason; internal diagnostics are bounded. TD-10 reconciliation recovers missing terminal updates rather than relying exclusively on event callbacks.
+
+**Libraries:** typeorm, bullmq
 
 ---
 
@@ -420,9 +438,11 @@ If TD-01 selects pg-boss, an adapter uses the TypeORM transactional connection t
 
 **Recommendation:** **Option A (outbox + reconciliation)** for TD-01/A — makes processing intent explicit, combining queue deduplication with conditional writes per generation and a database lease; redelivered or old jobs cannot overwrite current results, and reconciliation must also recover jobs lost after dispatcher confirmation.
 
-**Decision:** _[pending]_
+**Decision:** B (video row as the durable intent + reconciler, no outbox table)
 
-**Libraries:** TypeORM 0.3.28, PostgreSQL 17, and the selected queue; no additional outbox library. `jobId` does not replace permanent idempotency: BullMQ stops deduplicating an ID whose job was removed, as explained in the [job-ID documentation](https://docs.bullmq.io/guide/jobs/job-ids); the durable generation guard remains in the database.
+**Note:** A single pipeline and job type does not justify an outbox table and dispatcher. The `processing` status written in the completion transaction is the durable intent. Enqueue after commit with a deterministic `jobId` per video. A periodic reconciler in the worker re-enqueues videos stuck in `processing` without a live job, marks `error` when a job failed permanently but the row was not updated, and aborts expired upload sessions under TD-12. The processor is idempotent through deterministic keys and a conditional update only from `processing`; queue deduplication alone is insufficient after a job is removed. There is no generation counter or database lease requirement in this phase. This selected B policy takes precedence over the research recommendation of A.
+
+**Libraries:** typeorm, pg, bullmq
 
 ---
 
@@ -452,9 +472,11 @@ The draft also holds uploadId, expiration, and current-attempt details. Replacin
 
 **Recommendation:** **Option A (Video + UploadSession)** — keeps identity and ownership in the video domain and resumption in the upload domain, with short transactions and `channel.user_id` checks on initiation, retrieval, signing, completion, abort, and reprocessing; no endpoint treats arbitrary bucket/key/uploadId values as authority, and drafts remain restricted to their owner.
 
-**Decision:** _[pending]_
+**Decision:** A (Video + UploadSession)
 
-**Libraries:** TypeORM 0.3.28/PostgreSQL 17; S3 SDK v3. Resumption cross-checks the received manifest against [ListParts](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListParts.html), including pagination; completion uses verified numbers/ETags and checks size/metadata through [HeadObject](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html). Repeated completion requests are serialized per session and reconciled using the known key: [CompleteMultipartUpload may return an error even after starting a 200 response](https://docs.aws.amazon.com/AmazonS3/latest/API/API_CompleteMultipartUpload.html). Do not keep an SQL transaction open during byte transfer.
+**Note:** Exactly one upload session per video is created together with the draft at upload start; there is no session replacement or initiation idempotency key in this phase. The reconciler aborts sessions that expire before completion and marks the video `error` with `upload_expired`. Every endpoint verifies ownership through `channel.user_id`; client-supplied bucket/key/uploadId never establishes authority. Reconcile repeated completion after a lost S3 response with `HeadObject` on the known key, serializing completion per session. Cross-check parts through paginated `ListParts` and complete only verified numbers/ETags. Keep SQL transactions short and never open during byte transfer. These parameters narrow the session replacement/reprocessing suggestions in the research text.
+
+**Libraries:** typeorm, pg, @aws-sdk/client-s3
 
 ---
 
@@ -484,9 +506,13 @@ Proposes a 7-day session and incomplete-multipart lifecycle cleanup after 8 days
 
 **Recommendation:** **Option A (24h, with an explicit limit and measurement-based review)** — proposes interpreting 10GB as `10_000_000_000` bytes, 64MiB parts, and suggested consumer concurrency of four parts, validating expected size and actual size of every part before completion and final size before processing; oversized files are aborted/rejected without trusting client-declared MIME or size, and suggested concurrency is not a storage-enforced quota.
 
-**Decision:** _[pending]_
+**Decision:** A (24h session window, short renewable part URLs, reconciler cleanup)
 
-**Libraries:** S3 SDK v3, inherited ConfigModule/Joi, and TD-10's reconciliation mechanism. The [S3 multipart limits](https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html) accommodate this proposal (5MiB minimum for nonfinal parts, up to 10,000 parts); [multipart lifecycle cleanup](https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html) removes incomplete parts, not complete objects. Validate this operation against the chosen MinIO image: current documentation redirects to AIStor and does not automatically prove parity for a community image. Valid originals do not expire automatically; temporary files and unreferenced derivatives have separate cleanup protected against active jobs.
+**Note:** Maximum size is 10 GiB = 10,737,418,240 bytes, covering both readings of "10GB" because operating systems commonly display GiB as "GB". Use server-defined 64 MiB parts (at most 160 parts), a 24-hour session from creation, and 15-minute part URLs renewable while the session is active. Validate parts through `ListParts` before completion and final object size through `HeadObject` against the declared size; a mismatch causes abort/delete as applicable and `error`. Reconciler cleanup does not depend on bucket lifecycle rules, and expired sessions cannot be replaced under TD-11. These parameters override the proposed decimal limit and replacement-session behavior in the research text.
+
+The verifiable criterion for "without impacting performance" (AMB-1) is: (1) video bytes never pass through the API; it exchanges only small JSON control messages while clients PUT parts directly to storage through presigned URLs; (2) API memory use is independent of file size; (3) API control endpoints remain responsive during multipart upload, verified by an e2e test; and (4) a one-off controlled rehearsal transfers a real 10 GiB file through the multipart flow and records the environment, API memory observations, concurrent control requests, and outcome in `progress.md` during implementation. No latency SLA is added because none exists in `project-plan.md`.
+
+**Libraries:** @aws-sdk/client-s3, @nestjs/config, joi
 
 ---
 
@@ -516,9 +542,11 @@ Start an isolated project with equivalent services, its own volumes and networks
 
 **Recommendation:** **Option A (existing backend Compose + isolated test resources)** — fits the adopted Docker environment without changing the frontend, with real PostgreSQL/MinIO/queue integration and real FFmpeg in the worker path; use unit tests for branches and deterministic failures, and integration/e2e tests for external contracts and recovery.
 
-**Decision:** _[pending]_
+**Decision:** A (extend nestjs-project/compose.yaml)
 
-**Libraries:** Existing Docker Compose, Jest 30.3.0, ts-jest 29.4.6, and Supertest 7.2.2; S3 SDK and the queue from preceding decisions. The recommendation requires neither Testcontainers nor a new runner.
+**Note:** Add `minio`, a one-shot bucket-init service, `redis`, and `video-worker` to backend Compose. Pin Redis to `redis:8.2.3-bookworm` and the Docker Hub community MinIO build to `pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372`. This is the independent PGSTY MinIO fork, not an upstream MinIO, Inc. image: upstream Docker Hub tags returned 404/access denied and checked Quay tags were unavailable; the selected Docker Hub tag was verified by a successful pull. Its embedded `mcli` can initialize the bucket without adding an unverified `minio/mc` image. Both API and worker use the same image with `ffmpeg=7:5.1.9-0+deb12u1` on the verified bookworm base. See `library-refs.md` for provenance, exact pins, and verification evidence. Tests use a dedicated test bucket and queue name. Processing e2e tests run the processor against the test queue, independently of the development worker, and generate media with FFmpeg at test time; no binary fixtures are committed. Tests remain serialized against the shared test database.
+
+**Libraries:** jest, ts-jest, supertest
 
 ---
 
@@ -547,16 +575,16 @@ Still deferred: frontend, player, upload-progress/resumption UI; Phase 04 public
 
 | ID | Scope | Decision | Recommendation | Choice |
 |----|-------|----------|---------------|--------|
-| TD-01 | Backend | Queue technology | A — BullMQ + Redis | _[pending]_ |
-| TD-02 | Backend | Resumable upload outside the API | A — Presigned S3 multipart | _[pending]_ |
-| TD-03 | Backend | Buckets and keys | A — Private bucket with immutable prefixes | _[pending]_ |
-| TD-04 | Backend | Worker execution | A — Nest standalone in a separate container | _[pending]_ |
-| TD-05 | Backend | Reading for probe/thumbnail | B — Seekable remote reads with TD-06/D | _[pending]_ |
-| TD-06 | Backend | Playback format | D — Stream the original object unchanged | _[pending]_ |
-| TD-07 | Backend | Short URL without conflicts | A — Random 12-character ID + UNIQUE | _[pending]_ |
-| TD-08 | Backend | Streaming and downloads | A — Direct presigned GET from storage | _[pending]_ |
-| TD-09 | Backend | State and failures | A — draft/processing/ready/error + separate attempts | _[pending]_ |
-| TD-10 | Backend | Completion, queue, and recovery | A — Outbox and idempotent reconciliation | _[pending]_ |
-| TD-11 | Backend | Draft, resumption, and ownership | A — Video + UploadSession | _[pending]_ |
-| TD-12 | Backend | Limits and abandonment | A — 24h session, short signatures, and cleanup | _[pending]_ |
-| TD-13 | Repo-wide | Compose and real tests | A — Extend backend Compose with test isolation | _[pending]_ |
+| TD-01 | Backend | Queue technology | A — BullMQ + Redis | A |
+| TD-02 | Backend | Resumable upload outside the API | A — Presigned S3 multipart | A |
+| TD-03 | Backend | Buckets and keys | A — Private bucket with immutable prefixes | A |
+| TD-04 | Backend | Worker execution | A — Nest standalone in a separate container | A |
+| TD-05 | Backend | Reading for probe/thumbnail | B — Seekable remote reads with TD-06/D | B |
+| TD-06 | Backend | Playback format | D — Stream the original object unchanged | D |
+| TD-07 | Backend | Short URL without conflicts | A — Random 12-character ID + UNIQUE | A |
+| TD-08 | Backend | Streaming and downloads | A — Direct presigned GET from storage | A |
+| TD-09 | Backend | State and failures | A — draft/processing/ready/error + separate attempts | A |
+| TD-10 | Backend | Completion, queue, and recovery | A — Outbox and idempotent reconciliation | B |
+| TD-11 | Backend | Draft, resumption, and ownership | A — Video + UploadSession | A |
+| TD-12 | Backend | Limits and abandonment | A — 24h session, short signatures, and cleanup | A |
+| TD-13 | Repo-wide | Compose and real tests | A — Extend backend Compose with test isolation | A |
