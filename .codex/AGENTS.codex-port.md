@@ -18,7 +18,9 @@ Codex loads `.codex/config.toml`, `.codex/agents/` and `.codex/hooks.json` only 
 (`[projects."<absolute repo path>"] trust_level = "trusted"` in `~/.codex/config.toml`). MCP tools are not listed as
 top-level functions: they live in the code-mode tool catalog of the `exec` tool. Find them with
 `ALL_TOOLS.filter(t => /context7|postgres/i.test(t.name))` and call them from there (`list_mcp_resources` only lists
-resources, not tools). Use the context7 MCP tools for documentation lookups instead of raw HTTP calls.
+resources, not tools). MCP servers start asynchronously (`npx`), so context7 may be missing from `ALL_TOOLS` in
+the first seconds of a session: wait a few seconds and check again before concluding it is unavailable. Use the
+configured context7 MCP tools for documentation lookups; never call the HTTP endpoint or spawn your own MCP client.
 
 **Subproject instructions.** Codex only auto-loads the `AGENTS.md` files from the repository root down to the current
 working directory. Before working on files under `nestjs-project/` or `next-frontend/` from another directory, read
