@@ -1,12 +1,32 @@
-import { QueryFailedError } from 'typeorm';
+import {
+  QueryFailedError,
+  type DataSource,
+  type DeepPartial,
+  type EntityManager,
+  type FindOneOptions,
+} from 'typeorm';
 import { ChannelsService } from './channels.service';
 import { Channel } from './entities/channel.entity';
 
-function makeManager(overrides: Record<string, jest.Mock> = {}): any {
+interface ChannelManagerMock {
+  findOne: jest.Mock<
+    Promise<Channel | null>,
+    [typeof Channel, FindOneOptions<Channel>]
+  >;
+  create: jest.Mock<Channel, [typeof Channel, DeepPartial<Channel>]>;
+  save: jest.Mock<Promise<Channel>, [Channel]>;
+}
+
+function makeManager(
+  overrides: Partial<ChannelManagerMock> = {},
+): ChannelManagerMock {
   return {
-    findOne: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
+    findOne: jest.fn<
+      Promise<Channel | null>,
+      [typeof Channel, FindOneOptions<Channel>]
+    >(),
+    create: jest.fn<Channel, [typeof Channel, DeepPartial<Channel>]>(),
+    save: jest.fn<Promise<Channel>, [Channel]>(),
     ...overrides,
   };
 }
@@ -23,17 +43,29 @@ function makeChannel(nickname: string): Channel {
   return c;
 }
 
-function makeUniqueError(): QueryFailedError {
-  const err = new QueryFailedError('INSERT', [], new Error()) as any;
+function makeUniqueError(): QueryFailedError & {
+  code: string;
+  detail: string;
+} {
+  const err = new QueryFailedError(
+    'INSERT',
+    [],
+    new Error(),
+  ) as QueryFailedError & {
+    code: string;
+    detail: string;
+  };
   err.code = '23505';
   err.detail = 'Key (nickname)=(abc) already exists.';
   return err;
 }
 
-function makeDataSource(manager: any): any {
+function makeDataSource(manager: ChannelManagerMock): DataSource {
   return {
-    transaction: jest.fn((cb: (manager: any) => Promise<any>) => cb(manager)),
-  };
+    transaction: jest.fn((cb: (manager: EntityManager) => Promise<Channel>) =>
+      cb(manager as unknown as EntityManager),
+    ),
+  } as unknown as DataSource;
 }
 
 describe('ChannelsService', () => {
