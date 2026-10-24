@@ -3,8 +3,8 @@ kind: phase
 name: phase-03-videos
 sources_mtime:
   docs/project-plan.md: "2026-10-24T19:02:23.437728100+00:00"
-  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T17:43:56.498169952-03:00"
-  docs/phases/phase-03-videos/library-refs.md: "2026-10-24T17:47:02.153771915-03:00"
+  docs/decisions/technical-decisions-phase-03-videos.md: "2026-10-24T17:59:18.968343732-03:00"
+  docs/phases/phase-03-videos/library-refs.md: "2026-10-24T18:01:25.694654487-03:00"
   docs/decisions/technical-decisions-openapi-docs-nestjs.md: "2026-10-24T19:02:23.432154661+00:00"
   docs/phases/phase-01-configuracao-base/context.md: "2026-10-24T19:02:23.435272571+00:00"
   docs/phases/phase-02-auth/context.md: "2026-10-24T19:02:23.436274942+00:00"
@@ -61,7 +61,9 @@ sources_mtime:
 | phase-03-videos/TD-08 | phase | Backend | Streaming and Download Delivery | decided | A (presigned GET served by the storage) | @aws-sdk/client-s3, @aws-sdk/s3-request-presigner |
 | phase-03-videos/TD-09 | phase | Backend | Processing Lifecycle and Failure Policy | decided | A (draft → processing → ready or error, attempts tracked separately) | typeorm, bullmq |
 | phase-03-videos/TD-10 | phase | Backend | Consistency Across S3 Completion, Database, and Queue | decided | B (video row as the durable intent + reconciler, no outbox table) | typeorm, pg, bullmq |
+|     └─ Last revision: 2026-10-24 — Autonomously recover completed objects before the processing commit. | | | | | | |
 | phase-03-videos/TD-11 | phase | Backend | Draft Persistence, Resumable Session, and Ownership | decided | A (Video + UploadSession) | typeorm, pg, @aws-sdk/client-s3 |
+|     └─ Last revision: 2026-10-24 — Autonomously recover completed objects before the processing commit. | | | | | | |
 | phase-03-videos/TD-12 | phase | Backend | Operational Limits, Expiration, and Upload Cleanup | decided | A (24h session window, short renewable part URLs, reconciler cleanup) | @aws-sdk/client-s3, @nestjs/config, joi |
 | phase-03-videos/TD-13 | phase | Repo-wide | Compose Infrastructure and Real Upload/Processing Tests | decided | A (extend nestjs-project/compose.yaml) | jest, ts-jest, supertest |
 
@@ -70,6 +72,8 @@ _Source files:_
 - phase-03-videos — `docs/decisions/technical-decisions-phase-03-videos.md` (scope_type: phase, related_phases: [3])
 
 ### Resolved decision parameters
+
+**Second-cycle refinement (AMB-2, TD-10/B and TD-11/A):** The latest Revisions in Decisions Detail refine the earlier Notes' expiry wording. The reconciler scans `active` sessions after `expires_at` and verifies the known object with `HeadObject`. Matching `ContentLength` completes the session and commits the video to `processing`, then enqueues with the deterministic `jobId`; a mismatch deletes the object and expires the session with video `error` (`upload_expired`); no object triggers `AbortMultipartUpload` (`NoSuchUpload` means already aborted) and the same expiry/error transition. API completion and reconciliation both use `SELECT … FOR UPDATE` on the upload-session row in a short transaction and transition only from `active`, with idempotent S3 control calls re-checked under the lock and no transaction held during S3 byte transfer. Each session is completed or expired exactly once. The 24-hour window is the decision point for an unfinished session; a completed object is recovered without a client retry, a replacement session, or an extra entity. The full approved revision is reproduced under both TDs below.
 
 The supplied Pass 1 answers and their refinements below govern implementation. Research Options and Recommendations are preserved as written; where they differ, the selected Decision and Note take precedence. In particular, TD-10 selects B without an outbox, TD-12 uses 10 GiB, and TD-03/TD-11 do not introduce reprocessing, generations, source replacement, replacement sessions, or initiation idempotency keys. Library pins are documentation-only at this stage; manifests and lockfiles are unchanged.
 
@@ -167,10 +171,22 @@ The verifiable criterion for "without impacting performance" (AMB-1) is: (1) vid
 **Recommendation:** for TD-01/A — makes processing intent explicit, combining queue deduplication with conditional writes per generation and a database lease; redelivered or old jobs cannot overwrite current results, and reconciliation must also recover jobs lost after dispatcher confirmation.
 **Libraries:** typeorm, pg, bullmq
 
+**Revisions:**
+- 2026-10-24 — Autonomously recover completed objects before the processing commit. Rationale: verify the known object and autonomously continue, so no completed upload is forgotten and no extra entity is needed.
+  The reconciler scans `active` upload sessions whose `expires_at` has passed and runs `HeadObject` on each session's known key. If the object exists and `ContentLength` equals the declared size, finish the same completion path as the API: commit session `completed` and video `processing`, then enqueue with the deterministic `jobId` per video. If the object exists with a different size, delete it and commit session `expired` and video `error` with `upload_expired`. If there is no object, call `AbortMultipartUpload`, treating `NoSuchUpload` as already aborted, then commit session `expired` and video `error` with `upload_expired`.
+  API completion and reconciliation both lock the upload-session row with `SELECT … FOR UPDATE` inside a short transaction and only transition from `active`; each session is therefore completed or expired exactly once. Never hold the transaction during S3 byte transfer. S3 control calls that must precede the commit (`CompleteMultipartUpload`/`HeadObject`) are idempotent and re-checked under the lock. If the API exits after S3 completion but before the database commit and the client never retries, this reconciliation path still recovers the upload. A crash after the completion commit but before enqueue remains recoverable from the video's durable `processing` intent.
+  TD-12's 24-hour window is the point at which an unfinished session is decided; it does not discard a verified completed object. This refinement governs the earlier expiry wording while retaining TD-10/B, the single immutable source, and the no-reprocessing boundary.
+
 ### phase-03-videos/TD-11
 
 **Recommendation:** keeps identity and ownership in the video domain and resumption in the upload domain, with short transactions and `channel.user_id` checks on initiation, retrieval, signing, completion, abort, and reprocessing; no endpoint treats arbitrary bucket/key/uploadId values as authority, and drafts remain restricted to their owner.
 **Libraries:** typeorm, pg, @aws-sdk/client-s3
+
+**Revisions:**
+- 2026-10-24 — Autonomously recover completed objects before the processing commit. Rationale: verify the known object and autonomously continue, so no completed upload is forgotten and no extra entity is needed.
+  The reconciler scans `active` upload sessions whose `expires_at` has passed and runs `HeadObject` on each session's known key. If the object exists and `ContentLength` equals the declared size, finish the same completion path as the API: commit session `completed` and video `processing`, then enqueue with the deterministic `jobId` per video. If the object exists with a different size, delete it and commit session `expired` and video `error` with `upload_expired`. If there is no object, call `AbortMultipartUpload`, treating `NoSuchUpload` as already aborted, then commit session `expired` and video `error` with `upload_expired`.
+  API completion and reconciliation both lock the upload-session row with `SELECT … FOR UPDATE` inside a short transaction and only transition from `active`; each session is therefore completed or expired exactly once. Never hold the transaction during S3 byte transfer. S3 control calls that must precede the commit (`CompleteMultipartUpload`/`HeadObject`) are idempotent and re-checked under the lock. This works without a repeated client completion request after a lost S3 response or API crash, preserving exactly one upload session per video.
+  TD-12's 24-hour window is the point at which an unfinished session is decided; it does not discard a verified completed object. This refinement governs the earlier expiry wording while retaining TD-11/A, the single immutable source, and the no-reprocessing boundary.
 
 ### phase-03-videos/TD-12
 
@@ -218,6 +234,8 @@ The verifiable criterion for "without impacting performance" (AMB-1) is: (1) vid
 
 **Recommendation:** Option A (@nestjs/passport) — The project plan includes only email/password auth for now, but the plugin architecture costs little and future phases may add social login. Aligns with official NestJS docs, making onboarding and maintenance easier.
 
+**Note:** Decision deliberately diverged from the Recommendation during implementation — custom guards were preferred over `@nestjs/passport` to keep the dependency surface smaller; social login is not on the near-term roadmap, so the plugin-architecture benefit did not justify the extra abstraction layer.
+
 **Libraries:** `@nestjs/jwt@^11.0.0`
 
 ### phase-02-auth/TD-03
@@ -259,6 +277,8 @@ The verifiable criterion for "without impacting performance" (AMB-1) is: (1) vid
 ### phase-02-auth/TD-09
 
 **Recommendation:** Option B (Opaque) — Since DB lookup is mandatory (TD-03), JWT signature adds no security value. Opaque tokens are shorter, leak no data, and are simpler to generate.
+
+**Note:** Decision deliberately diverged from the Recommendation — JWT was kept to reuse the access-token signing/verification infrastructure (`@nestjs/jwt`), trading token size and base64-readability for a single token format across the codebase.
 
 **Libraries:** `@nestjs/jwt@^11.0.0`
 
