@@ -1,3 +1,5 @@
+import { Video } from '../videos/entities/video.entity';
+import { UploadSession } from '../videos/entities/upload-session.entity';
 import { Test } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,7 +13,14 @@ import { AuthModule } from './auth.module';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { VerificationToken } from './entities/verification-token.entity';
 
-const ALL_ENTITIES = [User, Channel, RefreshToken, VerificationToken];
+const ALL_ENTITIES = [
+  User,
+  Channel,
+  RefreshToken,
+  VerificationToken,
+  Video,
+  UploadSession,
+];
 
 describe('AuthModule', () => {
   it('should compile successfully with JwtModule, TypeOrmModule, UsersModule, and MailModule', async () => {

@@ -85,7 +85,14 @@
     "rootDir": "src",
     "testRegex": ".*\\.(spec|integration-spec)\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "allowJs": true
+          }
+        }
+      ]
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
@@ -97,6 +104,9 @@
     ],
     "setupFilesAfterEnv": [
       "<rootDir>/test/video-test-setup.ts"
+    ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!@nestjs/(?:bullmq|bull-shared)/)"
     ]
   }
 }

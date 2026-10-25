@@ -1,3 +1,5 @@
+import { Video } from '../videos/entities/video.entity';
+import { UploadSession } from '../videos/entities/upload-session.entity';
 import * as crypto from 'crypto';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule, ConfigType } from '@nestjs/config';
@@ -32,7 +34,14 @@ import {
   VerificationTokenType,
 } from './entities/verification-token.entity';
 
-const ALL_ENTITIES = [User, Channel, RefreshToken, VerificationToken];
+const ALL_ENTITIES = [
+  User,
+  Channel,
+  RefreshToken,
+  VerificationToken,
+  Video,
+  UploadSession,
+];
 
 async function createAuthTestModule(): Promise<TestingModule> {
   const ds = createTestDataSource(ALL_ENTITIES);
