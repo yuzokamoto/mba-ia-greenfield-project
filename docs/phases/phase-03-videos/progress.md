@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 7/27 completed
+**SIs:** 12/27 completed
 
 ### SI-03.1 — Install Dependencies and Prepare the Shared Infrastructure
 - **Status:** completed
@@ -78,29 +78,50 @@
   - Completed the authorized SI-03.4 through SI-03.7 batch and stopped before SI-03.8. The migration generation/run/revert/re-run evidence is under SI-03.5; the final schema remains migrated. Local .env and compose.override.yaml were untouched in this batch. No Git command changed version control state.
 
 ### SI-03.8 — Implement Upload Initiation and Public-ID Reservation
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/public-id.spec.ts src/videos/uploads/start-video-upload.service.spec.ts src/videos/uploads/start-video-upload.service.integration-spec.ts src/videos/videos.module.integration-spec.ts` — 18/18 passing, 4/4 suites. `docker compose exec -T nestjs-api npx tsc --noEmit` passed. Batch static and regression checks follow SI-03.12.
+- **Observations:**
+  - Added native 9-byte base64url PublicIdGenerator and exact named-constraint retry classification. Each of at most three insert attempts owns a fresh DataSource transaction; failed PostgreSQL transactions never leak into the next retry. Real concurrent collision tests verify this boundary.
+  - StartVideoUploadService resolves the caller's channel, allocates one server-owned UUID/key multipart upload, and creates the draft/session atomically through their owning services. Failed persistence aborts the allocation; a failed abort preserves both errors in AggregateError. Each acknowledged call creates a new pair.
+  - Created src/videos/public-id.ts, public-id.spec.ts, dto/start-video-upload-response.dto.ts, uploads/start-video-upload.service.ts, uploads/start-video-upload.service.spec.ts, uploads/start-video-upload.service.integration-spec.ts, videos.module.ts, videos.module.integration-spec.ts, and src/test/create-video-test-context.ts (all under nestjs-project/).
+  - Clean feature branch and 7/27 committed progress confirmed before resuming. Modern Test Specs preflight passed: all referenced files exist, no pending markers, and plan/spec age differences are within the 600-second grace window. Context7 offers TypeORM 0.3.27 versus installed 0.3.28; transaction APIs were cross-checked against local types and PostgreSQL. Nest 11.1.16 source docs did not match the validation query, so the official rolling Nest docs supplied the established ValidationPipe options without adopting newer APIs. Task tools remain unavailable; this progress file is the persistent checklist. No plan-contract change or new dependency.
 
 ### SI-03.9 — Expose Upload Initiation
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-uploads.e2e-spec.ts` — 8/8 passing, 1/1 suite. TypeScript passed; final static/regression checks follow SI-03.12.
+- **Observations:**
+  - Read the complete videos-uploads.plan.md at JIT authoring time and implemented its exact target file with one describe and eight named scenario tests. Scenarios verify exact projections, durable non-idempotent creation, native JWT failures, unknown-reference/form-data rejection, exact 10 GiB boundary, missing own channel, controlled storage failure, three real public-ID conflicts with compensation, and inherited native throttling.
+  - Created src/videos/dto/start-video-upload.dto.ts, src/videos/videos.controller.ts, test/helpers/video-e2e-context.ts, and test/videos-uploads.e2e-spec.ts. Updated src/videos/videos.module.ts and src/app.module.ts to register the authenticated JSON endpoint. Shared response DTOs introduced in SI-03.8 are reused. All paths are under nestjs-project/.
+  - Controller delegates using CurrentUser.sub and documents JSON request metadata, exact-byte int64 limit, nested 201 response, catalog errors, native 401, 429 and bearer security. HTTP fixtures reproduce main.ts pipes/filters, seed confirmed independent users and real signed JWTs, clean database/test storage per scenario, clear inherited throttler state, and close owned resources. No source bytes are accepted by the API. No new auth/rate-limit policy or plan deviation.
 
 ### SI-03.10 — Implement Part Signing and Resumption
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/uploads/upload-parts.service.spec.ts src/videos/uploads/upload-parts.service.integration-spec.ts` — 25/25 passing, 2/2 suites. Batch static and regression checks follow SI-03.12.
+- **Observations:**
+  - UploadPartsService authorizes through the owner-scoped video lookup, rejects missing/closed/elapsed sessions, validates unique integer part numbers against the server-derived count, and signs only server-owned references. TTL is at most 900 seconds and the remaining session window; a result extending past the deadline is rejected.
+  - Resumption aggregates the adapter's paginated inventory, sorts part numbers, and exposes exact ETags/byte sizes with the public session projection. Empty active inventory differs from S3 NoSuchUpload; a missing S3 upload returns UPLOAD_NOT_ACTIVE for signing and listing. Missing-part renewal preserves the same video/session identity.
+  - Created src/videos/uploads/upload-parts.service.ts, upload-parts.service.spec.ts, upload-parts.service.integration-spec.ts, and src/videos/dto/sign-upload-parts-response.dto.ts, uploaded-part.dto.ts, list-uploaded-parts-response.dto.ts. Updated src/videos/videos.module.ts provider/exports. All paths are under nestjs-project/.
+  - Real PostgreSQL/MinIO tests cover signed PUTs, interruption and missing-part renewal, one-part-per-page ListParts aggregation, actual ETags/sizes, persisted deadline caps, foreign-owner denial and closed database/storage uploads. Static checks identified Node Buffer/DOM BodyInit and untyped bind/Jest-call boundaries in tests; explicit Uint8Array and narrow boundary types resolve them. No plan-contract change or new dependency.
 
 ### SI-03.11 — Expose Part URL Signing
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-upload-parts-sign.e2e-spec.ts` — 8/8 passing, 1/1 suite. `docker compose exec -T nestjs-api npx tsc --noEmit` passed. Batch static and regression checks follow SI-03.12.
+- **Observations:**
+  - Read the complete videos-upload-parts-sign.plan.md at JIT authoring time and implemented its exact target file with one describe and eight named scenario tests. A correctly sized final part is PUT directly to the signed MinIO URL; tests preserve actual ETags and verify the public endpoint/signature parameters, exact response and requested number set, deadline-bounded renewal without replacement, validation versus session-relative conflicts, native auth/throttling, foreign-owner denial, closed sessions and controlled signing failure.
+  - Created src/videos/dto/video-public-id-params.dto.ts, src/videos/dto/sign-upload-parts.dto.ts, and test/videos-upload-parts-sign.e2e-spec.ts. Updated src/videos/videos.controller.ts with a thin authenticated POST delegate and explicit 200, and test/helpers/video-e2e-context.ts with reusable real upload fixtures. All paths are under nestjs-project/.
+  - Maximum input array length and static part-number bounds derive from UPLOAD_MAX_BYTES / UPLOAD_PART_SIZE_BYTES. DTO uniqueness/path validation uses the inherited 400 envelope; syntactically valid numbers outside a session's actual inventory use UPLOAD_PARTS_INVALID 409. OpenAPI documents the nested response, path/body constraints, bearer security, catalog errors, expiry and direct PUT procedure. No new dependency or plan deviation.
 
 ### SI-03.12 — Expose Uploaded-Part Resumption
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** Focused: `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-upload-parts-list.e2e-spec.ts` — 8/8 passing, 1/1 suite. Final full unit/integration: `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit` — 337/337 passing, 43/43 suites. Final full e2e: `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit` — 76/76 passing, 6/6 suites. Database test processes ran sequentially throughout the batch. `docker compose exec -T nestjs-api npx tsc --noEmit` passed; `docker compose exec -T nestjs-api npx eslint "{src,apps,libs,test}/**/*.ts"` passed without --fix, with 0 errors and 1 existing warning; `docker compose exec -T nestjs-api npm run build` passed. `git diff --check` passed. All focused suites in SI-03.8 through SI-03.12 passed on their first run.
+- **Observations:**
+  - Read the complete videos-upload-parts-list.plan.md at JIT authoring time and implemented its exact target file with one describe and eight named scenario tests. Verified all three endpoint test files against their source specs: exact scenario names/order, eight tests each, and one describe per file.
+  - Created nestjs-project/test/videos-upload-parts-list.e2e-spec.ts and updated nestjs-project/src/videos/videos.controller.ts with the thin authenticated GET delegate, shared path validation, exact session/part response and status-specific OpenAPI documentation. No request storage references are forwarded to the service: query/body attempts cannot select another upload or alter either upload's inventory.
+  - Real MinIO tests verify correct-size direct PUT subsets, actual ETags/sizes and missing numbers, empty active inventory, one-part-per-page aggregation with a real 64 MiB part plus a 1-byte final part, and stable session ID/deadline. Closed-upload tests actually complete an S3 upload and confirm NoSuchUpload becomes 409 rather than an empty active response. Pagination's 30-second test timeout accommodates the real transfer without adding a product latency SLA.
+  - Exact native JWT failures, owner/missing-video 404 equivalence, malformed-path validation, safe inventory-unavailable 503 and inherited throttling are covered. No worker, completion/abort endpoint, new policy, dependency or schema migration was introduced in this batch; the plan contracts are unchanged.
+  - Batch file manifest: 23 new files, listed under their owning SI entries above; existing tracked changes are nestjs-project/src/app.module.ts and this progress file. Existing persistence, storage, queue, authentication and migration source files were not edited. Local .env and compose.override.yaml were untouched; no Docker service/volume teardown, HTTP app server, audit fix or Git state mutation was performed. HTTP contexts ran only for the tests.
+  - Existing lint warning remains src/auth/auth.service.integration-spec.ts:477 (@typescript-eslint/no-unsafe-argument). Full regressions retain the Node localstorage-file warning, pg client.query() concurrency deprecation and conventional forceExit open-handles advisory. Pre-existing/transitive audit findings and the channel nickname-transaction race recorded earlier remain out-of-scope follow-ups.
+  - Completed the authorized SI-03.8 through SI-03.12 batch and stopped before SI-03.13, as requested. Phase status remains in_progress.
 
 ### SI-03.13 — Implement Serialized Upload Completion
 - **Status:** pending

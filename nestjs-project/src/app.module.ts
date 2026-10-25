@@ -6,7 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import databaseConfig from './config/database.config';
 import { runtimeConfigOptions } from './config/runtime-config';
-import { VideoPersistenceModule } from './videos/video-persistence.module';
+import { VideosModule } from './videos/videos.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { VideoPersistenceModule } from './videos/video-persistence.module';
       }),
     }),
     AuthModule,
-    VideoPersistenceModule,
+    VideosModule,
   ],
   controllers: [AppController],
   providers: [AppService],
