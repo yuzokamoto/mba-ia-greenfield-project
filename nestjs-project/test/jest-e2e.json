@@ -4,7 +4,18 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "tsconfig": {
+          "allowJs": true
+        }
+      }
+    ]
   },
-  "setupFiles": ["dotenv/config"]
+  "setupFiles": ["dotenv/config"],
+  "setupFilesAfterEnv": ["<rootDir>/../src/test/video-test-setup.ts"],
+  "transformIgnorePatterns": [
+    "/node_modules/(?!@nestjs/(?:bullmq|bull-shared)/)"
+  ]
 }

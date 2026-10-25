@@ -27,6 +27,18 @@
 
 ## Project setup
 
+Run Node/npm commands inside `nestjs-api`. Copy `.env.example` to `.env` for a
+new environment. For an existing environment, append only the labelled storage,
+queue, and worker block; preserve existing DB/JWT and other values. These are local
+development examples, not production credentials or validation defaults. Set
+`S3_CORS_ALLOWED_ORIGINS` to a comma-separated list of exact HTTP(S) origins;
+Compose passes it to MinIO's server-wide CORS configuration.
+
+API and standalone worker use `ConfigModule.forRoot(runtimeConfigOptions)` from
+`src/config/runtime-config.ts`. Required operational values are validated at
+startup. Media read URLs must last at least as long as the media operation
+timeout; signing TTLs cannot exceed seven days or the signing credentials' lifetime.
+
 ```bash
 $ npm install
 ```

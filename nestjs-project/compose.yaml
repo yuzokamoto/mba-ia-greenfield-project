@@ -1,17 +1,84 @@
+x-backend: &backend
+  image: streamtube-backend-dev
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+  env_file: .env
+  volumes:
+    - .:/home/node/app
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    minio-init:
+      condition: service_completed_successfully
+
 services:
   nestjs-api:
-    build: 
-      context: .
-      dockerfile: Dockerfile.dev
+    <<: *backend
     ports:
       - 3000:3000
-    volumes:
-      - .:/home/node/app
     depends_on:
       db:
         condition: service_healthy
       mailpit:
         condition: service_started
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  # Starts with the stack; waits for checkout setup and opens no HTTP listener.
+  video-worker:
+    <<: *backend
+    command: [node, docker/video-worker.cjs]
+    stop_grace_period: 30s
+    cpus: ${VIDEO_WORKER_CPUS:?Set VIDEO_WORKER_CPUS}
+    mem_limit: ${VIDEO_WORKER_MEMORY:?Set VIDEO_WORKER_MEMORY}
+
+  minio:
+    image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z@sha256:b6bfe7239bfc83fb90d31612d9704d86039dd714f7904b3f1ad68f211e602372
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      MINIO_API_CORS_ALLOW_ORIGIN: ${S3_CORS_ALLOWED_ORIGINS:?Set S3_CORS_ALLOWED_ORIGINS}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: [CMD, curl, -f, http://minio:9000/minio/health/ready]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  minio-init:
+    image: *minio-image
+    entrypoint: [/bin/sh, /init/minio-init.sh]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:?Set S3_BUCKET}
+    volumes:
+      - ./docker/minio-init.sh:/init/minio-init.sh:ro
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+
+  redis:
+    image: redis:8.2.3-bookworm@sha256:0908d9af26bf9b985e984a40a5eb82eed229b07a3317eee6843832c3cc3a9619
+    command: [redis-server, --appendonly, "yes", --maxmemory-policy, noeviction]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   db:
     image: postgres:17
@@ -33,4 +100,6 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-
+volumes:
+  minio-data:
+  redis-data:

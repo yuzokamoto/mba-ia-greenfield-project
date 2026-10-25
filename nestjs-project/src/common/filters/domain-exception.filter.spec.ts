@@ -1,3 +1,13 @@
+import { ChannelNotFoundException } from '../../channels/exceptions/channel-not-found.exception';
+import {
+  VideoNotFoundException,
+  UploadNotActiveException,
+  UploadPartsInvalidException,
+  UploadSizeMismatchException,
+  VideoNotReadyException,
+  VideoIdAllocationFailedException,
+} from '../../videos/exceptions/video.exceptions';
+import { StorageUnavailableException } from '../exceptions/storage-unavailable.exception';
 import { ArgumentsHost } from '@nestjs/common';
 import { DomainExceptionFilter } from './domain-exception.filter';
 import {
@@ -98,4 +108,60 @@ describe('DomainExceptionFilter', () => {
       message: expect.any(String) as unknown,
     });
   });
+
+  it.each([
+    [
+      new ChannelNotFoundException(),
+      'CHANNEL_NOT_FOUND',
+      404,
+      'Channel not found',
+    ],
+    [new VideoNotFoundException(), 'VIDEO_NOT_FOUND', 404, 'Video not found'],
+    [
+      new UploadNotActiveException(),
+      'UPLOAD_NOT_ACTIVE',
+      409,
+      'Upload session is not active',
+    ],
+    [
+      new UploadPartsInvalidException(),
+      'UPLOAD_PARTS_INVALID',
+      409,
+      'Uploaded parts do not match the expected upload',
+    ],
+    [
+      new UploadSizeMismatchException(),
+      'UPLOAD_SIZE_MISMATCH',
+      409,
+      'Uploaded size does not match the declared size',
+    ],
+    [
+      new VideoNotReadyException(),
+      'VIDEO_NOT_READY',
+      409,
+      'Video is not ready',
+    ],
+    [
+      new VideoIdAllocationFailedException(),
+      'VIDEO_ID_ALLOCATION_FAILED',
+      500,
+      'Video identifier could not be allocated',
+    ],
+    [
+      new StorageUnavailableException(
+        new Error('private object key and credentials'),
+      ),
+      'STORAGE_UNAVAILABLE',
+      503,
+      'Storage is temporarily unavailable',
+    ],
+  ] as const)(
+    'maps %s to its safe catalog envelope',
+    (exception, error, statusCode, message) => {
+      filter.catch(exception, mockHost);
+      expect(mockStatus).toHaveBeenCalledWith(statusCode);
+      expect(mockJson).toHaveBeenCalledWith({ statusCode, error, message });
+      expect(JSON.stringify(mockJson.mock.calls)).not.toContain('private');
+    },
+  );
 });

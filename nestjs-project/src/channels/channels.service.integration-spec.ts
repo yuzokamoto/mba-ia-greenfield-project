@@ -1,3 +1,5 @@
+import { Video } from '../videos/entities/video.entity';
+import { UploadSession } from '../videos/entities/upload-session.entity';
 import { DataSource, Repository } from 'typeorm';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
 import { VerificationToken } from '../auth/entities/verification-token.entity';
@@ -9,7 +11,14 @@ import { User } from '../users/entities/user.entity';
 import { ChannelsService } from './channels.service';
 import { Channel } from './entities/channel.entity';
 
-const ALL_ENTITIES = [User, Channel, RefreshToken, VerificationToken];
+const ALL_ENTITIES = [
+  User,
+  Channel,
+  RefreshToken,
+  VerificationToken,
+  Video,
+  UploadSession,
+];
 
 describe('ChannelsService (integration)', () => {
   let dataSource: DataSource;
@@ -87,6 +96,43 @@ describe('ChannelsService (integration)', () => {
 
       const channels = await channelRepository.find();
       expect(channels).toHaveLength(2);
+    });
+  });
+
+  describe('findOwnedByUserId', () => {
+    it('should resolve only the initiating user channel', async () => {
+      const first = await createUser();
+      const second = await createUser();
+      const firstChannel = await channelsService.createChannel(
+        first.id,
+        first.email,
+      );
+      const secondChannel = await channelsService.createChannel(
+        second.id,
+        second.email,
+      );
+      expect((await channelsService.findOwnedByUserId(first.id)).id).toBe(
+        firstChannel.id,
+      );
+      expect((await channelsService.findOwnedByUserId(second.id)).id).toBe(
+        secondChannel.id,
+      );
+      expect((await channelsService.findOwnedByUserId(first.id)).id).not.toBe(
+        secondChannel.id,
+      );
+    });
+
+    it('should report CHANNEL_NOT_FOUND when a user has no channel', async () => {
+      const user = await createUser();
+      await expect(
+        channelsService.findOwnedByUserId(user.id),
+      ).rejects.toMatchObject({
+        errorCode: 'CHANNEL_NOT_FOUND',
+        httpStatus: 404,
+      });
+      await expect(channelsService.findOwnedByUserId('')).rejects.toMatchObject(
+        { errorCode: 'CHANNEL_NOT_FOUND' },
+      );
     });
   });
 });

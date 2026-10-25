@@ -438,6 +438,1202 @@
           "auth"
         ]
       }
+    },
+    "/videos/{publicId}/download-url": {
+      "get": {
+        "description": "Returns an expiring JSON URL for the original object, not a redirect or binary body. Storage serves attachment disposition with the sanitized, escaped original filename and an independent configured download lifetime. The URL is a bearer credential until expiry; renewal requires the owner again and does not publish the video.",
+        "operationId": "VideosController_downloadUrl",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original attachment URL and configured download expiration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed public ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: video missing or outside caller ownership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VIDEO_NOT_READY: video has not reached ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_READY": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "VIDEO_NOT_READY",
+                      "message": "Video is not ready"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: temporary signing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Issue a download URL for an own ready video",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/{publicId}/playback-url": {
+      "get": {
+        "description": "Returns JSON, not a redirect or video bytes. The expiring URL is a bearer credential for the original object; storage serves reusable Range requests for seeking. Renewal requires owner authentication again. Browser codec support depends on the original format; ready does not publish the video.",
+        "operationId": "VideosController_playbackUrl",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inline original URL and configured expiration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedUrlResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed public ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: video missing or outside caller ownership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VIDEO_NOT_READY: video has not reached ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_READY": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "VIDEO_NOT_READY",
+                      "message": "Video is not ready"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: temporary signing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Issue a playback URL for an own ready video",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos": {
+      "get": {
+        "description": "Returns only the authenticated caller’s videos, ordered by created_at DESC then id DESC. Returns an empty array when there are none. No owner selector, filtering, pagination or publishing contract is provided.",
+        "operationId": "VideosController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Own videos, or an empty array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VideoResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List own videos",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/{publicId}": {
+      "get": {
+        "description": "Owner-only, read-only lookup in every lifecycle state by immutable 12-character public ID, not the internal UUID. Returns the retained session state/deadline and nullable processing results; never renews an upload or publishes a video.",
+        "operationId": "VideosController_detail",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Own video and upload session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnVideoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed public ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: video missing or outside caller ownership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Retrieve an own video",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/uploads": {
+      "post": {
+        "description": "Creates a new draft and active upload session for the caller’s channel. Accepts JSON metadata for at most 10 GiB (10737418240 bytes); source bytes are uploaded directly to storage.",
+        "operationId": "VideosController_start",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartVideoUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft and active upload session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartVideoUploadResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: invalid metadata or unknown fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHANNEL_NOT_FOUND: caller has no channel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "CHANNEL_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "CHANNEL_NOT_FOUND",
+                      "message": "Channel not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "500": {
+            "description": "VIDEO_ID_ALLOCATION_FAILED: three public-ID collisions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_ID_ALLOCATION_FAILED": {
+                    "value": {
+                      "statusCode": 500,
+                      "error": "VIDEO_ID_ALLOCATION_FAILED",
+                      "message": "Video identifier could not be allocated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: temporary storage failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Start a resumable video upload",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/{publicId}/upload/parts": {
+      "post": {
+        "description": "Owner-only renewal for an active, unexpired session. PUT bytes directly to the returned public storage URLs; no extra signed headers are required. URLs last at most 900 seconds and never beyond the session deadline. Preserve the signed hostname and returned ETags.",
+        "operationId": "VideosController_signParts",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignUploadPartsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Requested part URLs with expiration times",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignUploadPartsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed path/body, duplicate part numbers or unknown fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: missing or foreign-owned video",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_NOT_ACTIVE or UPLOAD_PARTS_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "UPLOAD_NOT_ACTIVE": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_NOT_ACTIVE",
+                      "message": "Upload session is not active"
+                    }
+                  },
+                  "UPLOAD_PARTS_INVALID": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_PARTS_INVALID",
+                      "message": "Uploaded parts do not match the expected upload"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: temporary storage/signing failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Sign upload part PUT URLs",
+        "tags": [
+          "videos"
+        ]
+      },
+      "get": {
+        "description": "Owner-only inventory for an active, unexpired session. Aggregates every storage page into one sorted response with actual ETags and sizes. Derive missing numbers from total_parts and renew only those parts. No client storage references or continuation tokens are used. Closed/expired sessions return 409; use video retrieval after completion.",
+        "operationId": "VideosController_listParts",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing upload session and complete uploaded-part inventory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUploadedPartsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed public ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: missing or foreign-owned video",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_NOT_ACTIVE: closed or expired upload session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "UPLOAD_NOT_ACTIVE": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_NOT_ACTIVE",
+                      "message": "Upload session is not active"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: temporary inventory retrieval failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List uploaded parts for resumption",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/{publicId}/upload/complete": {
+      "post": {
+        "description": "Verifies the contiguous storage inventory and final object size, then commits completed-session/processing-video intent before publishing. HTTP 202 acknowledges asynchronous processing, not readiness. Repeated completion returns the current video without another job. Lost storage responses and matching objects at the deadline are recovered; unfinished uploads are not completed after expiry. A recoverable post-commit queue outage leaves durable intent for reconciliation.",
+        "operationId": "VideosController_complete",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteVideoUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Durable processing intent, or the current video for an already completed session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed manifest/path or unknown fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: missing or foreign-owned video",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_NOT_ACTIVE, UPLOAD_PARTS_INVALID or UPLOAD_SIZE_MISMATCH; required cleanup/error transitions commit before size rejection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "UPLOAD_NOT_ACTIVE": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_NOT_ACTIVE",
+                      "message": "Upload session is not active"
+                    }
+                  },
+                  "UPLOAD_PARTS_INVALID": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_PARTS_INVALID",
+                      "message": "Uploaded parts do not match the expected upload"
+                    }
+                  },
+                  "UPLOAD_SIZE_MISMATCH": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_SIZE_MISMATCH",
+                      "message": "Uploaded size does not match the declared size"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: verification/cleanup remains pending for retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Complete a verified video upload",
+        "tags": [
+          "videos"
+        ]
+      }
+    },
+    "/videos/{publicId}/upload/abort": {
+      "post": {
+        "description": "Owner-only cancellation with no request body or query parameters. Retains the draft identity and closes its single session. Repeated aborted/expired sessions are idempotent. Completion and expiry serialize on the same session lock; a verified completed object is recovered and retained, returning UPLOAD_NOT_ACTIVE rather than claiming cancellation. Required storage cleanup failures remain pending for retry.",
+        "operationId": "VideosController_abort",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{12}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Upload aborted, or already aborted/expired; no response body"
+          },
+          "400": {
+            "description": "VALIDATION_ERROR: malformed public ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "statusCode": 400,
+                      "error": "VALIDATION_ERROR",
+                      "message": [
+                        "publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message",
+                    "statusCode"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    },
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "VIDEO_NOT_FOUND: missing or foreign-owned video",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "VIDEO_NOT_FOUND": {
+                    "value": {
+                      "statusCode": 404,
+                      "error": "VIDEO_NOT_FOUND",
+                      "message": "Video not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "UPLOAD_NOT_ACTIVE: completion already won or its verified object was recovered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "UPLOAD_NOT_ACTIVE": {
+                    "value": {
+                      "statusCode": 409,
+                      "error": "UPLOAD_NOT_ACTIVE",
+                      "message": "Upload session is not active"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Inherited global throttler limit exceeded"
+          },
+          "503": {
+            "description": "STORAGE_UNAVAILABLE: required abort/verification remains pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorEnvelope"
+                },
+                "examples": {
+                  "STORAGE_UNAVAILABLE": {
+                    "value": {
+                      "statusCode": 503,
+                      "error": "STORAGE_UNAVAILABLE",
+                      "message": "Storage is temporarily unavailable"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Abort an active video upload",
+        "tags": [
+          "videos"
+        ]
+      }
     }
   },
   "info": {
@@ -480,6 +1676,347 @@
       "ResetPasswordDto": {
         "type": "object",
         "properties": {}
+      },
+      "SignedUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "url",
+          "expires_at"
+        ]
+      },
+      "VideoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "public_id": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 12,
+            "pattern": "^[A-Za-z0-9_-]{12}$"
+          },
+          "channel_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "processing",
+              "ready",
+              "error"
+            ]
+          },
+          "failure_reason": {
+            "type": "string",
+            "enum": [
+              "invalid_media",
+              "processing_failed",
+              "upload_expired"
+            ],
+            "nullable": true
+          },
+          "original_filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "declared_size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 10737418240
+          },
+          "duration": {
+            "type": "number",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "public_id",
+          "channel_id",
+          "title",
+          "status",
+          "failure_reason",
+          "original_filename",
+          "content_type",
+          "declared_size",
+          "duration",
+          "metadata",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UploadSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "aborted",
+              "expired"
+            ]
+          },
+          "part_size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "total_parts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "part_size",
+          "total_parts",
+          "expires_at"
+        ]
+      },
+      "OwnVideoResponseDto": {
+        "type": "object",
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoResponseDto"
+          },
+          "upload_session": {
+            "$ref": "#/components/schemas/UploadSessionResponseDto"
+          }
+        },
+        "required": [
+          "video",
+          "upload_session"
+        ]
+      },
+      "StartVideoUploadDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "example": "My video"
+          },
+          "original_filename": {
+            "type": "string",
+            "minLength": 1,
+            "example": "example.mp4"
+          },
+          "content_type": {
+            "type": "string",
+            "minLength": 1,
+            "example": "video/mp4"
+          },
+          "declared_size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 10737418240,
+            "description": "Source size in bytes, at most 10 GiB (10737418240 bytes)."
+          }
+        },
+        "required": [
+          "title",
+          "original_filename",
+          "content_type",
+          "declared_size"
+        ]
+      },
+      "StartVideoUploadResponseDto": {
+        "type": "object",
+        "properties": {
+          "video": {
+            "$ref": "#/components/schemas/VideoResponseDto"
+          },
+          "upload_session": {
+            "$ref": "#/components/schemas/UploadSessionResponseDto"
+          }
+        },
+        "required": [
+          "video",
+          "upload_session"
+        ]
+      },
+      "SignUploadPartsDto": {
+        "type": "object",
+        "properties": {
+          "part_numbers": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 160
+            },
+            "minItems": 1,
+            "maxItems": 160,
+            "uniqueItems": true,
+            "example": [
+              1,
+              2
+            ]
+          }
+        },
+        "required": [
+          "part_numbers"
+        ]
+      },
+      "SignedUploadPartDto": {
+        "type": "object",
+        "properties": {
+          "part_number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 160
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Direct storage PUT URL; no additional signed headers are required."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "part_number",
+          "url",
+          "expires_at"
+        ]
+      },
+      "SignUploadPartsResponseDto": {
+        "type": "object",
+        "properties": {
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SignedUploadPartDto"
+            }
+          }
+        },
+        "required": [
+          "parts"
+        ]
+      },
+      "UploadedPartDto": {
+        "type": "object",
+        "properties": {
+          "part_number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 160
+          },
+          "etag": {
+            "type": "string",
+            "description": "Exact storage ETag, preserved for upload completion."
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "part_number",
+          "etag",
+          "size"
+        ]
+      },
+      "ListUploadedPartsResponseDto": {
+        "type": "object",
+        "properties": {
+          "upload_session": {
+            "$ref": "#/components/schemas/UploadSessionResponseDto"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UploadedPartDto"
+            }
+          }
+        },
+        "required": [
+          "upload_session",
+          "parts"
+        ]
+      },
+      "CompleteVideoUploadPartDto": {
+        "type": "object",
+        "properties": {
+          "part_number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 160
+          },
+          "etag": {
+            "type": "string",
+            "minLength": 1,
+            "example": "\"storage-etag\""
+          }
+        },
+        "required": [
+          "part_number",
+          "etag"
+        ]
+      },
+      "CompleteVideoUploadDto": {
+        "type": "object",
+        "properties": {
+          "parts": {
+            "minItems": 1,
+            "maxItems": 160,
+            "uniqueItems": true,
+            "description": "Every expected part exactly once, unique by part_number, with its exact storage ETag.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompleteVideoUploadPartDto"
+            }
+          }
+        },
+        "required": [
+          "parts"
+        ]
       },
       "ApiErrorEnvelope": {
         "type": "object",

@@ -1,3 +1,5 @@
+import { Video } from '../../videos/entities/video.entity';
+import { UploadSession } from '../../videos/entities/upload-session.entity';
 import { DataSource, Repository } from 'typeorm';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 import { VerificationToken } from '../../auth/entities/verification-token.entity';
@@ -8,7 +10,14 @@ import {
 import { Channel } from '../../channels/entities/channel.entity';
 import { User } from './user.entity';
 
-const ALL_ENTITIES = [User, Channel, RefreshToken, VerificationToken];
+const ALL_ENTITIES = [
+  User,
+  Channel,
+  RefreshToken,
+  VerificationToken,
+  Video,
+  UploadSession,
+];
 
 describe('User entity (integration)', () => {
   let dataSource: DataSource;
