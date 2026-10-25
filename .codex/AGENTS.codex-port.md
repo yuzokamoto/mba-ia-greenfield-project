@@ -44,9 +44,24 @@ language preference. Chat replies to the user may use the user's language.
   (plus the companion files it references) and follow it.
 - `Agent` tool with `subagent_type: <name>` where `<name>` is a project agent → `spawn_agent` with the custom agent
   `<name>` from `.codex/agents/`, passing the same inputs the skill specifies; wait for it and use its returned block
-  exactly as the skill describes. `subagent_type: Explore` → built-in `explorer`; `subagent_type: general-purpose` →
-  built-in `default` (or `worker` for execution-heavy work such as running test suites). Sub-agents do not see this
-  conversation: put every input they need in the spawn message, as the skills already require.
+  exactly as the skill describes. `subagent_type: Explore` → built-in `explorer`; any other `subagent_type:
+  general-purpose` delegation → built-in `default`. Sub-agents do not see this conversation: put every input they need
+  in the spawn message, as the skills already require.
+- Test execution is never delegated. Where a skill says to delegate running tests to a sub-agent (e.g. `implement`
+  step 4, `subagent_type: general-purpose`), run the tests yourself and do not call `spawn_agent`. A Codex sub-agent
+  forks the parent's whole conversation, and one that waits on a long test process re-sends that context on every
+  poll, so it costs far more than running the suite directly. How to run them:
+  1. Read the subproject's `AGENTS.md` for the command conventions (container, env, runner).
+  2. Run exactly the files the skill lists, once per attempt. Block until the command exits and redirect
+     stdout/stderr to a log file: `<documented test command> <files> > /tmp/si-tests.log 2>&1; echo exit=$?`.
+  3. Read only the runner's summary lines. For jest that is `grep -E '^(PASS|FAIL|Tests:)' /tmp/si-tests.log`. On a
+     failure, read just the failure blocks; for jest, `grep -n -A40 '●' /tmp/si-tests.log`.
+  The skill's report rules still apply to what you read: keep every diagnostic line (test names, assertion diffs,
+  stack frames into project code, console output, setup/teardown errors, timeouts) and skip only noise. The fix-loop
+  limit (3 attempts) is unchanged.
+- Sub-agent tools unavailable (e.g. the run uses `--disable multi_agent`) → do the delegated work yourself. For a
+  project agent, follow the `developer_instructions` in `.codex/agents/<name>.toml` and produce the same returned block.
+  For `Explore`, use `rg` / `sed -n`.
 - `AskUserQuestion` → in an interactive session, ask the user and wait. In a non-interactive run (`codex exec`), end
   the turn with the pending questions — numbered, each with its options, the recommended option first and marked
   "(Recommended)", plus the context needed to decide — and stop. Never assume an answer and never continue past a
@@ -56,8 +71,10 @@ language preference. Chat replies to the user may use the user's language.
 - `mcp__context7__resolve-library-id` and `mcp__context7__query-docs` (older name: `get-library-docs`) → the tools of
   the `context7` MCP server; `mcp__postgres__query` → the `query` tool of the `postgres` MCP server.
 - `WebFetch` / `WebSearch` → the web search tool when enabled; otherwise `curl` from the shell.
-- "Run in background in the Bash tool" → start never-ending processes detached (`docker compose exec -d ...`) and poll
-  them; never block a turn waiting on a process that does not exit.
+- "Run in background in the Bash tool" → start never-ending processes detached (`docker compose exec -d ...`) and check
+  them with a single `tail`/`grep` of their log at long intervals (≥ 60 s), never with rapid empty polls. Never block
+  a turn waiting on a process that does not exit. Commands that do exit, such as test suites and builds, run in the
+  foreground until they finish.
 
 ### Path-scoped rules
 
