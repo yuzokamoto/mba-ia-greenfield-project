@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { DataSource } from 'typeorm';
 import videoConfig from '../../config/video.config';
 import { VideoProcessingProducer } from '../queue/video-processing-producer.service';
 import { UploadSessionsService } from '../uploads/upload-sessions.service';
@@ -38,6 +39,16 @@ describe('VideoReconcilerService', () => {
     module = await Test.createTestingModule({
       providers: [
         VideoReconcilerService,
+        {
+          provide: DataSource,
+          useValue: {
+            createQueryRunner: () => ({
+              connect: jest.fn(),
+              query: jest.fn().mockResolvedValue([{ locked: true }]),
+              release: jest.fn(),
+            }),
+          },
+        },
         { provide: UploadSessionsService, useValue: sessions },
         { provide: UploadTerminationService, useValue: termination },
         { provide: VideoRecordsService, useValue: records },

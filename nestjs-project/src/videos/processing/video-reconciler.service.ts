@@ -6,6 +6,8 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
+import { DataSource } from 'typeorm';
+import { withVideoMaintenanceLock } from './video-maintenance-lock';
 import videoConfig from '../../config/video.config';
 import { VideoFailureReason, VideoStatus } from '../entities/video.entity';
 import { VideoProcessingProducer } from '../queue/video-processing-producer.service';
@@ -19,6 +21,7 @@ export class VideoReconcilerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(VideoReconcilerService.name);
   private timer?: NodeJS.Timeout;
   private inFlight?: Promise<void>;
+  private scheduled?: Promise<void>;
   private stopping = false;
 
   constructor(
@@ -28,12 +31,24 @@ export class VideoReconcilerService implements OnModuleInit, OnModuleDestroy {
     private readonly producer: VideoProcessingProducer,
     @Inject(videoConfig.KEY)
     private readonly config: ConfigType<typeof videoConfig>,
+    private readonly dataSource: DataSource,
   ) {}
 
   onModuleInit(): void {
     this.timer = setInterval(() => {
-      void this.tick();
+      if (this.stopping || this.scheduled) return;
+      this.scheduled = this.scheduledTick();
     }, this.config.reconcileIntervalMs);
+  }
+
+  private async scheduledTick(): Promise<void> {
+    try {
+      await withVideoMaintenanceLock(this.dataSource, () => this.tick());
+    } catch {
+      this.logger.warn('Video maintenance lock deferred');
+    } finally {
+      this.scheduled = undefined;
+    }
   }
 
   tick(): Promise<void> {
@@ -122,5 +137,6 @@ export class VideoReconcilerService implements OnModuleInit, OnModuleDestroy {
     clearInterval(this.timer);
     this.timer = undefined;
     await this.inFlight;
+    await this.scheduled;
   }
 }

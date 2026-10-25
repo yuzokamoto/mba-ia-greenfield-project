@@ -5,7 +5,7 @@
 
 ## Environment Startup Verification
 
-**Default behavior:** starting the environment means starting **only infrastructure services** (database, mail, etc.) — **never** start the NestJS application server unless the user explicitly asks to run/serve the project (e.g., "rode o projeto", "suba o servidor", "run the app").
+**Default behavior:** starting the environment starts infrastructure and the background video worker. Start the NestJS HTTP application server only when the user explicitly asks to run/serve the project (e.g., "rode o projeto", "suba o servidor", "run the app").
 
 After starting infrastructure, always confirm the containers are up before proceeding:
 
@@ -28,7 +28,8 @@ This project runs inside Docker. Always use the container for development:
 docker compose up -d
 
 # Install dependencies (first time only)
-docker compose exec nestjs-api npm install
+docker compose exec nestjs-api npm ci
+docker compose exec nestjs-api npm run migration:run
 
 # Run the dev server (watch mode)
 docker compose exec nestjs-api npm run start:dev
@@ -220,7 +221,7 @@ stable; a policy change requires a new migration.
 From `nestjs-project/`, start infrastructure and verify readiness:
 
 ```bash
-docker compose up -d db mailpit minio minio-init redis nestjs-api
+docker compose up -d
 docker compose ps -a
 docker compose exec -T db pg_isready -U streamtube
 docker compose exec -T redis redis-cli ping
@@ -238,17 +239,27 @@ make a bucket public. Redis uses persistent AOF and `noeviction`, with no host p
 
 ### Worker lifecycle and recovery
 
-Build before starting the opt-in development worker:
+Plain Compose startup includes the development worker; no profile or manual worker
+build is required. On a fresh checkout, complete setup in the API container:
 
 ```bash
-docker compose exec -T nestjs-api npm run worker:build
-docker compose --profile worker up -d video-worker
+docker compose up -d
+docker compose exec -T nestjs-api npm ci
+docker compose exec -T nestjs-api npm run migration:run
 docker compose logs --tail 50 video-worker
-docker compose stop video-worker
+docker compose restart video-worker
 ```
 
-Rebuild and recreate the worker after code changes. It runs `node dist/video-worker.js`
-in a separate container with no HTTP listener, sharing the API image's pinned native
+Restart the worker after code changes. `docker/video-worker.cjs` waits quietly for
+dependencies and the video schema, checking every five seconds with bounded DB
+timeouts. It compiles with the installed TypeScript into container-local
+`/tmp/streamtube-video-worker` on each start/restart and starts that private entrypoint.
+Build diagnostics go to `/tmp/video-worker-build.log`; unsuccessful builds retry
+after five seconds. API `nest build`/`start:dev` may delete shared `dist/` without
+affecting the worker, including modules loaded later. No second shared build tree,
+watcher, dependency installer, or migration runner is needed. The supervisor forwards
+SIGTERM/SIGINT and awaits its child. The worker uses the same backend image, has
+CPU/memory limits and no HTTP listener, and shares the image's pinned native
 FFmpeg/ffprobe binaries. `VideoWorkerModule` uses a standalone application context,
 without AppModule/AuthModule/controllers. Concurrency is 1 with three total durable
 attempts and exponential backoff. Internal signed GETs feed bounded asynchronous
@@ -270,12 +281,18 @@ presigned query strings or unbounded media diagnostics.
 
 ### Isolated verification and large-upload rehearsal
 
-**Stop the development worker before every test suite.** Development and test queues
-and buckets differ, but the database is shared: the development reconciler can still
-change rows used by tests. Never run two test processes concurrently.
+The development worker may remain running during test suites. Buckets and queues
+are isolated; scheduled reconciliation additionally takes shared PostgreSQL advisory
+lock `730319`. Integration/e2e setup holds the exclusive lock on a dedicated
+connection before fixtures are created, releasing it when the suite closes. A
+scheduled scan skips quietly while that lock is held; shutdown awaits any active
+scan and lock release. This excludes expiry, missing-job publication and retained-job
+recovery from test rows. Explicit test-owned `tick()` calls remain available and
+test workers consume only their isolated queue. Unit suites open no lock connection.
+Never run two test processes concurrently. Full suites have been verified with the
+development worker running (Implementation revision 3 in the phase progress file).
 
 ```bash
-docker compose stop video-worker
 docker compose exec -T nestjs-api npm test -- --runInBand
 docker compose exec -T nestjs-api npm run test:e2e
 docker compose exec -T nestjs-api npx tsc --noEmit

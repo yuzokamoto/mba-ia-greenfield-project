@@ -21,6 +21,8 @@ sources_mtime:
 
 Deliver backend storage and background processing for resumable video uploads up to 10 GiB, automatic draft creation, duration and metadata extraction, thumbnail generation, immutable unique video identifiers, owner-authorized streaming, and downloads, with recovery across storage, database, and queue failures; `next-frontend/` is deferred.
 
+**Implementation revision 3 (delivery acceptance):** The completed worker starts with plain `docker compose up -d`, sharing the backend image, existing dependencies/resources and graceful shutdown contract; the HTTP server remains opt-in. A development supervisor waits for checkout dependencies and the migrated video schema, compiles its own container-local entrypoint and starts it without manual worker commands. Private output survives deletion of shared `dist/` by API builds. Scheduled reconciliation uses a cooperative PostgreSQL advisory gate so integration/e2e fixtures can exclude development scans while explicit test reconciliation remains available. Verify both full suites with the worker running, API rebuild resilience, restart/stop, and quiet readiness; record evidence in `progress.md`. This supersedes the initial worker profile/manual-build instructions without changing the 27 SI boundaries.
+
 ---
 
 ## Step Implementations
