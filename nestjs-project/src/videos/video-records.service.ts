@@ -90,6 +90,29 @@ export class VideoRecordsService {
     return result.affected === 1;
   }
 
+  async reserveProcessingAttempt(id: string): Promise<number | null> {
+    const result = await this.dataSource
+      .getRepository(Video)
+      .createQueryBuilder()
+      .update(Video)
+      .set({ processing_attempts: () => '"processing_attempts" + 1' })
+      .where(
+        'id = :id AND status = :status AND processing_attempts < :maximum',
+        { id, status: VideoStatus.PROCESSING, maximum: 3 },
+      )
+      .returning('processing_attempts')
+      .execute();
+    const rows = result.raw as { processing_attempts: number }[];
+    return rows[0]?.processing_attempts ?? null;
+  }
+
+  async findProcessing(): Promise<Pick<Video, 'id'>[]> {
+    return await this.dataSource.getRepository(Video).find({
+      select: { id: true },
+      where: { status: VideoStatus.PROCESSING },
+    });
+  }
+
   toResponse(video: Video): VideoResponseDto {
     return {
       id: video.id,

@@ -1,4 +1,4 @@
-import type { TestingModule } from '@nestjs/testing';
+import type { INestApplicationContext } from '@nestjs/common';
 import type { DataSource } from 'typeorm';
 import type { StorageService } from '../storage/storage.service';
 import type { UploadSession } from '../videos/entities/upload-session.entity';
@@ -9,7 +9,7 @@ import { createVideoFixture } from './video-test-data';
 export async function seedLifecycleUpload(
   context: {
     dataSource: DataSource;
-    module: TestingModule;
+    module: INestApplicationContext;
     storage: StorageService;
   },
   declaredSize = 1,

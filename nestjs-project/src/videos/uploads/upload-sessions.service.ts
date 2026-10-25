@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, type EntityManager } from 'typeorm';
+import { DataSource, LessThanOrEqual, type EntityManager } from 'typeorm';
 import type { UploadSessionResponseDto } from '../dto/upload-session-response.dto';
 import {
   UploadSession,
@@ -40,6 +40,18 @@ export class UploadSessionsService {
     return await manager
       .getRepository(UploadSession)
       .findOneBy({ video_id: videoId });
+  }
+
+  async findExpiredActive(
+    now: Date,
+  ): Promise<Pick<UploadSession, 'video_id'>[]> {
+    return await this.dataSource.getRepository(UploadSession).find({
+      select: { video_id: true },
+      where: {
+        status: UploadSessionStatus.ACTIVE,
+        expires_at: LessThanOrEqual(now),
+      },
+    });
   }
 
   async lockForVideo(

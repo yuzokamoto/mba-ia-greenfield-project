@@ -29,10 +29,12 @@ services:
       minio-init:
         condition: service_completed_successfully
 
-  # Opt in when the standalone entrypoint is implemented in SI-03.18.
+  # Opt in after npm run worker:build; this process opens no HTTP listener.
   video-worker:
     <<: *backend
     profiles: [worker]
+    command: [node, dist/video-worker.js]
+    stop_grace_period: 30s
     cpus: ${VIDEO_WORKER_CPUS:?Set VIDEO_WORKER_CPUS}
     mem_limit: ${VIDEO_WORKER_MEMORY:?Set VIDEO_WORKER_MEMORY}
 
