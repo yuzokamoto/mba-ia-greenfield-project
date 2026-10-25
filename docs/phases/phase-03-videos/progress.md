@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 24/27 completed
+**SIs:** 26/27 completed
 
 ### SI-03.1 — Install Dependencies and Prepare the Shared Infrastructure
 - **Status:** completed
@@ -228,14 +228,23 @@
   - Tests verify configured public endpoint, exact JSON without redirect, two real 206 source ranges, retained video/session/job inventory through renewal, all readiness/auth/ownership/validation failures, safe signing outage and inherited throttling. A real 2-second JWT expires while its previously issued 5-second storage URL remains usable; renewal fails with 401, that exact URL subsequently expires with real MinIO 403, and fresh authorized renewal works. No fake storage clock or URL swap is used in this HTTP bearer scenario. No publication or identity mutation.
 
 ### SI-03.25 — Expose the Download URL
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runTestsByPath test/videos-download-url.e2e-spec.ts` — 8/8 passing, 1/1 suite; exited naturally.
+- **Observations:**
+  - Verified the committed route and all eight scenarios against SI-03.25, its external spec, authorization matrix and error catalog. Real MinIO checks cover original bytes, safe attachment filenames and immutable object keys, all readiness/auth/ownership/validation failures, signing outage, independent download expiry, JWT expiry with surviving storage bearer access, renewal and throttling. No implementation or test rewrite was necessary.
+  - Resumed clean feature/phase-03-videos from reviewer handoff. Modern Test Specs preflight passed without pending, missing or stale references. TaskCreate/TaskUpdate tools are unavailable; this file remains the persistent SI checklist. No sub-agents or Git mutations were used. Development worker remained stopped.
 
 ### SI-03.26 — Regenerate OpenAPI and Document Backend Conventions
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/openapi-export.integration-spec.ts` — 13/13 passing, 1/1 suite. `docker compose exec -T nestjs-api npm run test:e2e -- --runTestsByPath test/swagger.e2e-spec.ts` — 7/7 passing, 1/1 suite, exited naturally. `docker compose exec -T nestjs-api npm run openapi:export` passed; `docker compose exec -T nestjs-api npx tsc --noEmit` passed; `docker compose exec -T nestjs-api npm run lint` passed with 0 errors / 1 pre-existing warning at src/auth/auth.service.integration-spec.ts:477. Root `node scripts/port-ai-foundation-to-codex.mjs --check` passed: `PORT_CHECK=ok files=257`. `git diff --check` passed.
+- **Observations:**
+  - Audited all nine operations against API Contracts, Authorization Matrix and Error Catalog. Offline ts-node export does not run the Nest CLI Swagger plugin: added explicit field metadata for the three missing initiation strings and the otherwise empty completion-part model. Added concrete domain/validation error examples while retaining shared ApiErrorEnvelope references and the actual native guard 401 shape. Regenerated openapi.json; no endpoint business behavior changed.
+  - Extended the actual export integration test for tracked-schema parity, nine operation/status/security/path contracts, exact 10 GiB and multipart bounds, nested DTOs, and no HTTP listener or worker-only processor/reconciler providers. Extended Swagger HTTP checks for the protected video surface while retaining enabled/disabled UI/JSON/YAML coverage.
+  - Canonical nestjs-project/CLAUDE.md now documents labelled local configuration, internal/public endpoints, constants, private bucket/CORS initialization, queue failure/recovery behavior, worker build/start/stop, shared-database isolation, serial test:e2e, offline OpenAPI metadata, and a future controlled real 10 GiB rehearsal. Root conventions required no change. Generated the backend AGENTS.md rather than editing it by hand.
+  - Tooling deviation: the root generator initially failed when removing the sandbox's read-only .agents/skills directory. Ran the unchanged generator in a writable /tmp staging copy of canonical inputs and copied back its generated nestjs-project/AGENTS.md; the unmodified repository --check then passed all 257 files. No protected directory or generator source was changed.
+  - Context7 lookup used installed Nest 11.1.16; that version's source cache lacked the Swagger topic, so the official rolling Nest documentation was consulted and checked against installed Swagger 11.4.2 types. Initial tsc failed on two unexported Swagger type imports and two legacy info casts; corrected once. Initial integration run failed all 13 tests in shared setup because the Nest application proxy did not expose the Jest mock API; fix attempt 1 monitored Node's HTTP Server and inspected the real ModulesContainer instead, then all 13 passed. Initial lint reported 3 new unsafe-operation-traversal errors plus the existing warning; fix attempt 1 used typed get/post traversal, then lint, Swagger e2e and tsc passed again. No assertions were weakened or skipped.
+  - Updated files: nestjs-project/src/videos/dto/start-video-upload.dto.ts, src/videos/dto/complete-video-upload.dto.ts, src/videos/videos.controller.ts, src/openapi-export.integration-spec.ts, test/swagger.e2e-spec.ts, openapi.json, CLAUDE.md and generated AGENTS.md; plus this progress file. No new files. Task tools remain unavailable; no delegation or Git mutations. Local .env and compose.override.yaml remain untouched; the development worker stayed stopped throughout verification.
+  - Per the explicit run boundary, full regression suites and the real 10 GiB rehearsal remain deferred to SI-03.27, which was not started. Reviewer baseline remains 500/500 unit/integration and 123/123 HTTP tests; these are prior results, not new full-suite claims. No new out-of-scope issue was identified; the existing auth lint warning remains unchanged.
 
 ### SI-03.27 — Verify the Full Pipeline and Rehearse a Real 10 GiB Upload
 - **Status:** pending

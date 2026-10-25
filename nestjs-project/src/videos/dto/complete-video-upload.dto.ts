@@ -17,12 +17,14 @@ import { UPLOAD_MAX_BYTES, UPLOAD_PART_SIZE_BYTES } from '../videos.constants';
 const maximumParts = Math.ceil(UPLOAD_MAX_BYTES / UPLOAD_PART_SIZE_BYTES);
 
 export class CompleteVideoUploadPartDto {
+  @ApiProperty({ type: 'integer', minimum: 1, maximum: maximumParts })
   @IsInt()
   @Min(1)
   @Max(maximumParts)
   part_number: number;
 
   /** Exact ETag returned by storage, including any quotes. */
+  @ApiProperty({ minLength: 1, example: '"storage-etag"' })
   @IsString()
   @IsNotEmpty()
   etag: string;

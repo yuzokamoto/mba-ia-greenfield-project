@@ -60,7 +60,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed public ID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -77,17 +92,56 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description: 'VIDEO_NOT_READY: video has not reached ready',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_READY: {
+            value: {
+              statusCode: 409,
+              error: 'VIDEO_NOT_READY',
+              message: 'Video is not ready',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 503,
     description: 'STORAGE_UNAVAILABLE: temporary signing failure',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -118,7 +172,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed public ID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -135,17 +204,56 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description: 'VIDEO_NOT_READY: video has not reached ready',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_READY: {
+            value: {
+              statusCode: 409,
+              error: 'VIDEO_NOT_READY',
+              message: 'Video is not ready',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 503,
     description: 'STORAGE_UNAVAILABLE: temporary signing failure',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -208,7 +316,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed public ID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -225,7 +348,20 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -255,7 +391,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: invalid metadata or unknown fields',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -272,7 +423,20 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'CHANNEL_NOT_FOUND: caller has no channel',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          CHANNEL_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'CHANNEL_NOT_FOUND',
+              message: 'Channel not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -281,12 +445,38 @@ export class VideosController {
   @ApiResponse({
     status: 500,
     description: 'VIDEO_ID_ALLOCATION_FAILED: three public-ID collisions',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_ID_ALLOCATION_FAILED: {
+            value: {
+              statusCode: 500,
+              error: 'VIDEO_ID_ALLOCATION_FAILED',
+              message: 'Video identifier could not be allocated',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 503,
     description: 'STORAGE_UNAVAILABLE: temporary storage failure',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   async start(
     @CurrentUser() user: JwtPayload,
@@ -317,7 +507,22 @@ export class VideosController {
     status: 400,
     description:
       'VALIDATION_ERROR: malformed path/body, duplicate part numbers or unknown fields',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -334,12 +539,45 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: missing or foreign-owned video',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description: 'UPLOAD_NOT_ACTIVE or UPLOAD_PARTS_INVALID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          UPLOAD_NOT_ACTIVE: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_NOT_ACTIVE',
+              message: 'Upload session is not active',
+            },
+          },
+          UPLOAD_PARTS_INVALID: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_PARTS_INVALID',
+              message: 'Uploaded parts do not match the expected upload',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -348,7 +586,20 @@ export class VideosController {
   @ApiResponse({
     status: 503,
     description: 'STORAGE_UNAVAILABLE: temporary storage/signing failure',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   async signParts(
     @CurrentUser() user: JwtPayload,
@@ -381,7 +632,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed public ID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -398,12 +664,38 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: missing or foreign-owned video',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description: 'UPLOAD_NOT_ACTIVE: closed or expired upload session',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          UPLOAD_NOT_ACTIVE: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_NOT_ACTIVE',
+              message: 'Upload session is not active',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -412,7 +704,20 @@ export class VideosController {
   @ApiResponse({
     status: 503,
     description: 'STORAGE_UNAVAILABLE: temporary inventory retrieval failure',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   async listParts(
     @CurrentUser() user: JwtPayload,
@@ -443,7 +748,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed manifest/path or unknown fields',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -460,13 +780,53 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: missing or foreign-owned video',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description:
       'UPLOAD_NOT_ACTIVE, UPLOAD_PARTS_INVALID or UPLOAD_SIZE_MISMATCH; required cleanup/error transitions commit before size rejection',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          UPLOAD_NOT_ACTIVE: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_NOT_ACTIVE',
+              message: 'Upload session is not active',
+            },
+          },
+          UPLOAD_PARTS_INVALID: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_PARTS_INVALID',
+              message: 'Uploaded parts do not match the expected upload',
+            },
+          },
+          UPLOAD_SIZE_MISMATCH: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_SIZE_MISMATCH',
+              message: 'Uploaded size does not match the declared size',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -476,7 +836,20 @@ export class VideosController {
     status: 503,
     description:
       'STORAGE_UNAVAILABLE: verification/cleanup remains pending for retry',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   async complete(
     @CurrentUser() user: JwtPayload,
@@ -508,7 +881,22 @@ export class VideosController {
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_ERROR: malformed public ID',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VALIDATION_ERROR: {
+            value: {
+              statusCode: 400,
+              error: 'VALIDATION_ERROR',
+              message: [
+                'publicId must match /^[A-Za-z0-9_-]{12}$/ regular expression',
+              ],
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -525,13 +913,39 @@ export class VideosController {
   @ApiResponse({
     status: 404,
     description: 'VIDEO_NOT_FOUND: missing or foreign-owned video',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          VIDEO_NOT_FOUND: {
+            value: {
+              statusCode: 404,
+              error: 'VIDEO_NOT_FOUND',
+              message: 'Video not found',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 409,
     description:
       'UPLOAD_NOT_ACTIVE: completion already won or its verified object was recovered',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          UPLOAD_NOT_ACTIVE: {
+            value: {
+              statusCode: 409,
+              error: 'UPLOAD_NOT_ACTIVE',
+              message: 'Upload session is not active',
+            },
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
@@ -541,7 +955,20 @@ export class VideosController {
     status: 503,
     description:
       'STORAGE_UNAVAILABLE: required abort/verification remains pending',
-    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+    content: {
+      'application/json': {
+        schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+        examples: {
+          STORAGE_UNAVAILABLE: {
+            value: {
+              statusCode: 503,
+              error: 'STORAGE_UNAVAILABLE',
+              message: 'Storage is temporarily unavailable',
+            },
+          },
+        },
+      },
+    },
   })
   async abort(
     @CurrentUser() user: JwtPayload,

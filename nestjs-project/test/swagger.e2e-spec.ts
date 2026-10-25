@@ -85,6 +85,32 @@ describe('Swagger endpoints (e2e)', () => {
         .expect(200);
       expect(res.headers['content-type']).toMatch(/yaml/);
     });
+
+    it('publishes all nine protected video contracts only through the enabled docs surface', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/docs-json')
+        .expect(200);
+      const doc = response.body as import('@nestjs/swagger').OpenAPIObject;
+      const operations = Object.entries(doc.paths)
+        .filter(([path]) => path.startsWith('/videos'))
+        .flatMap(([, methods]) =>
+          (['get', 'post'] as const).flatMap((method) => {
+            const operation = methods?.[method];
+            return operation ? [operation] : [];
+          }),
+        );
+      expect(operations).toHaveLength(9);
+      for (const operation of operations) {
+        expect(operation.security).toEqual([{ 'access-token': [] }]);
+        expect(operation.responses['401']).toBeDefined();
+      }
+      expect(doc.components!.schemas!.StartVideoUploadDto).toMatchObject({
+        properties: {
+          declared_size: { maximum: 10737418240, format: 'int64' },
+        },
+      });
+      await request(app.getHttpServer()).get('/videos').expect(401);
+    });
   });
 
   describe('when SWAGGER_ENABLED is not set', () => {
