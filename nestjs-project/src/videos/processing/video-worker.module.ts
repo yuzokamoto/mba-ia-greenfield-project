@@ -19,7 +19,8 @@ import { VideoProcessor } from './video.processor';
 import { VideoReconcilerService } from './video-reconciler.service';
 
 export const VIDEO_WORKER_CONFIG = 'video-worker' as const;
-export const VIDEO_WORKER_QUEUE = 'video-worker' as const;
+// This registration is a DI name, never the configured Redis queue name.
+export const VIDEO_WORKER_QUEUE = 'video-processing:worker' as const;
 
 @Module({
   imports: [
@@ -71,7 +72,11 @@ export const VIDEO_WORKER_QUEUE = 'video-worker' as const;
         // Nest discovers factory-provided processors by their runtime constructor.
         @Processor(
           { name: config.name, configKey: VIDEO_WORKER_CONFIG },
-          { concurrency: 1 },
+          {
+            concurrency: 1,
+            // BullExplorer may discover another Queue's options by name first.
+            connection: { ...config.connection, maxRetriesPerRequest: null },
+          },
         )
         class ConfiguredVideoProcessor extends VideoProcessor {
           @OnWorkerEvent('error')

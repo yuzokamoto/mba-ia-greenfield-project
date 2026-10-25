@@ -24,6 +24,10 @@ import { CompleteVideoUploadDto } from './dto/complete-video-upload.dto';
 import { VideoResponseDto } from './dto/video-response.dto';
 import { CompleteVideoUploadService } from './uploads/complete-video-upload.service';
 import { AbortVideoUploadService } from './uploads/abort-video-upload.service';
+import { OwnVideosService } from './own-videos.service';
+import { OwnVideoResponseDto } from './dto/own-video-response.dto';
+import { VideoAccessService } from './video-access.service';
+import { SignedUrlResponseDto } from './dto/signed-url-response.dto';
 
 @ApiTags('videos')
 @ApiBearerAuth('access-token')
@@ -34,7 +38,205 @@ export class VideosController {
     private readonly uploadParts: UploadPartsService,
     private readonly completeUpload: CompleteVideoUploadService,
     private readonly abortUpload: AbortVideoUploadService,
+    private readonly ownVideos: OwnVideosService,
+    private readonly videoAccess: VideoAccessService,
   ) {}
+
+  @Get(':publicId/download-url')
+  @ApiParam({
+    name: 'publicId',
+    schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' },
+  })
+  @ApiOperation({
+    summary: 'Issue a download URL for an own ready video',
+    description:
+      'Returns an expiring JSON URL for the original object, not a redirect or binary body. Storage serves attachment disposition with the sanitized, escaped original filename and an independent configured download lifetime. The URL is a bearer credential until expiry; renewal requires the owner again and does not publish the video.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Original attachment URL and configured download expiration',
+    type: SignedUrlResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_ERROR: malformed public ID',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing, invalid or expired access token',
+    schema: {
+      type: 'object',
+      required: ['message', 'statusCode'],
+      properties: {
+        message: { type: 'string', example: 'Unauthorized' },
+        statusCode: { type: 'integer', example: 401 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'VIDEO_NOT_READY: video has not reached ready',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'STORAGE_UNAVAILABLE: temporary signing failure',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Inherited global throttler limit exceeded',
+  })
+  async downloadUrl(
+    @CurrentUser() user: JwtPayload,
+    @Param() params: VideoPublicIdParamsDto,
+  ): Promise<SignedUrlResponseDto> {
+    return await this.videoAccess.download(params.publicId, user.sub);
+  }
+
+  @Get(':publicId/playback-url')
+  @ApiParam({
+    name: 'publicId',
+    schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' },
+  })
+  @ApiOperation({
+    summary: 'Issue a playback URL for an own ready video',
+    description:
+      'Returns JSON, not a redirect or video bytes. The expiring URL is a bearer credential for the original object; storage serves reusable Range requests for seeking. Renewal requires owner authentication again. Browser codec support depends on the original format; ready does not publish the video.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Inline original URL and configured expiration',
+    type: SignedUrlResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_ERROR: malformed public ID',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing, invalid or expired access token',
+    schema: {
+      type: 'object',
+      required: ['message', 'statusCode'],
+      properties: {
+        message: { type: 'string', example: 'Unauthorized' },
+        statusCode: { type: 'integer', example: 401 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'VIDEO_NOT_READY: video has not reached ready',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'STORAGE_UNAVAILABLE: temporary signing failure',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Inherited global throttler limit exceeded',
+  })
+  async playbackUrl(
+    @CurrentUser() user: JwtPayload,
+    @Param() params: VideoPublicIdParamsDto,
+  ): Promise<SignedUrlResponseDto> {
+    return await this.videoAccess.playback(params.publicId, user.sub);
+  }
+
+  @Get()
+  @ApiOperation({
+    summary: 'List own videos',
+    description:
+      'Returns only the authenticated caller’s videos, ordered by created_at DESC then id DESC. Returns an empty array when there are none. No owner selector, filtering, pagination or publishing contract is provided.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Own videos, or an empty array',
+    type: VideoResponseDto,
+    isArray: true,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing, invalid or expired access token',
+    schema: {
+      type: 'object',
+      required: ['message', 'statusCode'],
+      properties: {
+        message: { type: 'string', example: 'Unauthorized' },
+        statusCode: { type: 'integer', example: 401 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Inherited global throttler limit exceeded',
+  })
+  async list(@CurrentUser() user: JwtPayload): Promise<VideoResponseDto[]> {
+    return await this.ownVideos.list(user.sub);
+  }
+
+  @Get(':publicId')
+  @ApiParam({
+    name: 'publicId',
+    schema: { type: 'string', pattern: '^[A-Za-z0-9_-]{12}$' },
+  })
+  @ApiOperation({
+    summary: 'Retrieve an own video',
+    description:
+      'Owner-only, read-only lookup in every lifecycle state by immutable 12-character public ID, not the internal UUID. Returns the retained session state/deadline and nullable processing results; never renews an upload or publishes a video.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Own video and upload session',
+    type: OwnVideoResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_ERROR: malformed public ID',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Missing, invalid or expired access token',
+    schema: {
+      type: 'object',
+      required: ['message', 'statusCode'],
+      properties: {
+        message: { type: 'string', example: 'Unauthorized' },
+        statusCode: { type: 'integer', example: 401 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'VIDEO_NOT_FOUND: video missing or outside caller ownership',
+    schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Inherited global throttler limit exceeded',
+  })
+  async detail(
+    @CurrentUser() user: JwtPayload,
+    @Param() params: VideoPublicIdParamsDto,
+  ): Promise<OwnVideoResponseDto> {
+    return await this.ownVideos.detail(params.publicId, user.sub);
+  }
 
   @Post('uploads')
   @HttpCode(201)

@@ -1,6 +1,7 @@
 import { ListMultipartUploadsCommand } from '@aws-sdk/client-s3';
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { ConfigType } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
@@ -8,6 +9,7 @@ import type { Response } from 'supertest';
 import type { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
+import videoConfig from '../../src/config/video.config';
 import { ChannelsService } from '../../src/channels/channels.service';
 import { DomainExceptionFilter } from '../../src/common/filters/domain-exception.filter';
 import { ValidationExceptionFilter } from '../../src/common/filters/validation-exception.filter';
@@ -41,10 +43,17 @@ export const startUploadBody = {
   declared_size: 67108865,
 };
 
-export async function createVideoE2eContext() {
-  const module = await Test.createTestingModule({
+export async function createVideoE2eContext(
+  videoOverrides: Partial<ConfigType<typeof videoConfig>> = {},
+) {
+  const builder = Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  });
+  if (Object.keys(videoOverrides).length)
+    builder
+      .overrideProvider(videoConfig.KEY)
+      .useValue({ ...videoConfig(), ...videoOverrides });
+  const module = await builder.compile();
   const app: INestApplication<App> = module.createNestApplication();
   app.useGlobalPipes(
     new ValidationPipe({

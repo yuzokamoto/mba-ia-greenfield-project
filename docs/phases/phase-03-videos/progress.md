@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 19/27 completed
+**SIs:** 24/27 completed
 
 ### SI-03.1 — Install Dependencies and Prepare the Shared Infrastructure
 - **Status:** completed
@@ -25,6 +25,7 @@
 
 ### SI-03.3 — Establish Isolated Video Test Helpers
 - **Status:** completed
+- **Reviewer findings:** F2 — corrected the pre-existing command/config mismatch by adding --runInBand to package.json's test:e2e script. The documented plain command is now serial. `docker compose exec -T nestjs-api npm run test:e2e` passed 96/96 tests in 8/8 suites and exited naturally, without --forceExit. No generated documentation required editing.
 - **Tests:** Focused: `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/test/video-test-environment.spec.ts src/test/video-test-environment.integration-spec.ts` — 15/15 passing, 2/2 suites. Full unit/integration: `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit` — 212/212 passing, 26/26 suites. Full HTTP: `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit` — 52/52 passing, 3/3 suites. All test processes ran sequentially on the resumed working tree. `docker compose exec -T nestjs-api npx tsc --noEmit` passed; `docker compose exec -T nestjs-api npm run lint` passed with 0 errors and 1 existing warning; `docker compose exec -T nestjs-api npm run build` passed. `git diff --check` passed.
 - **Observations:**
   - Resumed from reviewer commit a7ee9dd with SI-03.1 and SI-03.2 complete. Re-read and reviewed the partial SI-03.3 source and tests; retained the correct implementation. The committed environment validator already contains its named media-lifetime diagnostic and was not changed. No plan deviations.
@@ -169,6 +170,7 @@
 
 ### SI-03.18 — Run the Standalone Video Worker and Processor
 - **Status:** completed
+- **Reviewer findings:** F1 — BullExplorer could select the producer Queue's bounded Redis options when the development queue name matched its DI registration. Producer and worker Queue DI registrations now contain a colon (forbidden in configured Redis queue names), and Processor worker options explicitly supply the worker connection (maxRetriesPerRequest: null, no commandTimeout, offline queue allowed). Added video-worker-connection.integration-spec.ts, forcing the producer registration to video-processing-test so the collision is reproduced safely with real dependencies; it asserts runtime worker options and consumes generated media successfully. `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/processing/video-worker-connection.integration-spec.ts src/videos/processing/video-worker.module.integration-spec.ts src/videos/queue/video-processing-producer.integration-spec.ts src/videos/queue/video-queue.module.integration-spec.ts` passed 14/14 tests, 4/4 suites. worker:build and targeted ESLint passed. After tests exited, `docker compose --profile worker up -d video-worker` used the real development bucket/queue (streamtube-videos / video-processing); ready was logged at 12:40:30 UTC, and inspection through 12:40:55 UTC found no connection errors. `docker compose --profile worker stop video-worker` exited 0 with OOM=false. No tests ran while the development worker was active. Context7 Processor options and the installed BullExplorer spread order verify the explicit connection override.
 - **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/processing/video-processing.service.spec.ts src/videos/processing/video-processing.service.integration-spec.ts src/videos/processing/video.processor.integration-spec.ts src/videos/processing/video-worker.module.integration-spec.ts` — 15/15 passing, 4/4 suites. `docker compose exec -T nestjs-api npm run worker:build` passed. Targeted ESLint passed without --fix; tsc passed before the rehearsal helper, with final batch checks following SI-03.19.
 - **Observations:**
   - Added VideoProcessingService, VideoProcessor, VideoWorkerModule, explicit worker shutdown lifecycle and src/video-worker.ts; atomic attempt reservation lives in VideoRecordsService. Added the four planned tests plus create-video-worker-test-context.ts, video-processing-test-data.ts and video-worker-compose-rehearsal.ts under src/test. package.json supplies worker:build/worker:start; compose.yaml activates the profiled worker command with a 30-second shutdown grace period and existing resource limits. No HTTP/API/AuthModule graph is imported.
@@ -189,29 +191,41 @@
   - Batch updated-file manifest (6): nestjs-project/compose.yaml, package.json, src/test/upload-lifecycle-test-data.ts, src/videos/video-records.service.ts, src/videos/uploads/upload-sessions.service.ts; and docs/phases/phase-03-videos/progress.md. SI-03.16 records the approved Implementation revision 2; subsequent SIs retain the plan's existing policy. The pre-existing auth integration lint warning at line 477, Node localstorage-file warning, pg concurrency deprecation, conventional forceExit advisory, 43 transitive audit findings and earlier channel nickname-transaction race remain out-of-scope observations.
 
 ### SI-03.20 — Implement Own-Video Detail and Listing Queries
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/own-videos.service.integration-spec.ts` — 9/9 passing, 1/1 suite. tsc and targeted ESLint checks follow; full batch checks are recorded under SI-03.25.
+- **Observations:**
+  - Added OwnVideosService, OwnVideoResponseDto and the planned integration test; registered/exported the query service in VideosModule. VideoRecordsService owns the joined owner/session detail query and ordered owner listing. Detail loads the pair in one joined query; both projections reuse explicit safe field/bigint/date mapping. A missing persisted session propagates as an invariant error rather than inventing a projection.
+  - Real PostgreSQL tests cover all four states, safe nullable results, 10-GiB numeric conversion, session/deadline/aborted visibility, foreign/missing indistinguishability, creation/UUID tie order, isolation, empty listing and no storage/attempt bookkeeping leakage. No pagination, filtering, editing or publishing contract was added.
+  - Resume confirmed clean reviewer commit 5c49325 on feature/phase-03-videos, 19/27 committed SIs, installed dependencies and modern Test Specs preflight without pending/missing/stale references. Context7 TypeORM 0.3.27 differs from installed 0.3.28, as already documented in the library cache; installed types and real joins/order verify the shared APIs. Task tools remain unavailable; this progress file is the persistent SI checklist. F1/F2 corrections above were explicitly authorized and verified before this SI; no Git state mutation.
 
 ### SI-03.21 — Expose Own-Video Detail
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-detail.e2e-spec.ts` — 6/6 passing, 1/1 suite. tsc and targeted ESLint passed for SI-03.20; current endpoint/static and full batch checks are recorded under SI-03.25.
+- **Observations:**
+  - Read videos-detail.plan.md in full at JIT authoring time and implemented exactly its six named scenarios in order under one describe in test/videos-detail.e2e-spec.ts. Added shared test/helpers/video-projection.ts for explicit independent wire assertions. Updated VideosController with the thin validated owner-detail delegate and OpenAPI success/error/auth/public-ID documentation; DTO schemas retain nullable processing fields and distinguish internal UUID/public identity.
+  - Scenario 1.5 step 2 exercises the approved Implementation revision 2: a real voluntary abort followed by repeated detail GETs retains the draft, aborted session, identity and original deadline. Both active processing-intent and aborted cases snapshot persisted rows and queue inventory, proving retrieval does not renew/replace/restart anything. Safe error allowlist, all lifecycle states, exact fields, ownership/auth/validation and inherited throttling are covered. No plan deviation.
 
 ### SI-03.22 — Expose the Own-Video Listing
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-list.e2e-spec.ts` — 5/5 passing, 1/1 suite. SI-03.21 was rerun after new-test static cleanup and remained 6/6 passing. Full static/regression results follow SI-03.25.
+- **Observations:**
+  - Read videos-list.plan.md in full at JIT authoring time; added test/videos-list.e2e-spec.ts with exactly five named scenarios in order under one describe. Updated VideosController with a thin collection delegate, explicit response array, ordering/empty-result/owner-scope description and inherited auth/throttle documentation.
+  - Fixtures cover all lifecycle states and interleaved foreign ownership, a real creation timestamp tie resolved by UUID descending, empty users with/without a channel, exact safe fields and 10-GiB conversion. Query/body owner/channel/user selectors cannot disclose foreign rows or change persisted ownership. No filtering, pagination, publishing or client owner selector was introduced. Initial SI-03.21 targeted lint found new-test formatting and an unsafe matcher assignment; the corrected exact-key/array checks and repeat focused run passed without weakening assertions.
 
 ### SI-03.23 — Implement Playback and Download URL Authorization
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/video-access.service.spec.ts src/videos/video-access.service.integration-spec.ts` — 16/16 passing, 2/2 suites, including repeat after integration-fixture formatting cleanup. tsc passed; final batch static/regression checks follow SI-03.25.
+- **Observations:**
+  - Added VideoAccessService, SignedUrlResponseDto and both planned tests; registered/exported the service in VideosModule. Both operations resolve owner-scoped records and enforce ready before signing the server-known original key. Filename preparation strips Windows/POSIX components and C0/C1 controls, with safe empty/dot fallback; the existing StorageService performs RFC 5987 header encoding and mode-specific, credential-capped TTL selection. No signed URL or new result is persisted.
+  - Unit tests cover both modes, readiness/ownership/storage failures, Unicode/quotes/path/control removal and empty/dot names. Real PostgreSQL/MinIO tests serve independent 206 ranges from generated H.264 source bytes with no signed Range, verify attachment UTF-8 filename/byte identity, different configured test TTLs, expired/tampered 403s and fresh authorized access. Historical signing-clock control is restored before storage verification. No source derivative, API byte proxy, codec allowlist or policy change.
+  - Context7 AWS SDK v3.1153.0 differs from installed 3.1156.0, matching the existing cache note. Existing signer types and real MinIO verify the shared GetObject/presigning APIs. Existing signing/temporary-credential tests already cover expiry capping; this SI reuses that boundary rather than duplicating signing implementation.
 
 ### SI-03.24 — Expose the Playback URL
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-playback-url.e2e-spec.ts` — 8/8 passing, 1/1 suite. The actual bearer/expiry scenario passed in 6.186 seconds. SI-03.23 targeted lint and current tsc passed; final static/regression results follow SI-03.25.
+- **Observations:**
+  - Read videos-playback-url.plan.md in full at JIT authoring time; authored exactly eight named scenarios in source order under one describe. Added a thin validated playback delegate with JSON/expiry/renewal/Range/original-format/bearer semantics and all cataloged error documentation. Added test/helpers/video-access-e2e.ts for generated source/session fixture completion and exact URL response assertions; the existing HTTP context accepts test-only typed video configuration overrides without changing local env values.
+  - Tests verify configured public endpoint, exact JSON without redirect, two real 206 source ranges, retained video/session/job inventory through renewal, all readiness/auth/ownership/validation failures, safe signing outage and inherited throttling. A real 2-second JWT expires while its previously issued 5-second storage URL remains usable; renewal fails with 401, that exact URL subsequently expires with real MinIO 403, and fresh authorized renewal works. No fake storage clock or URL swap is used in this HTTP bearer scenario. No publication or identity mutation.
 
 ### SI-03.25 — Expose the Download URL
 - **Status:** pending

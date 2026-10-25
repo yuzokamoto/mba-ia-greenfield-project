@@ -10,6 +10,8 @@ import { UploadLifecycleModule } from './uploads/upload-lifecycle.module';
 import { CompleteVideoUploadService } from './uploads/complete-video-upload.service';
 import { VideoQueueModule } from './queue/video-queue.module';
 import { AbortVideoUploadService } from './uploads/abort-video-upload.service';
+import { OwnVideosService } from './own-videos.service';
+import { VideoAccessService } from './video-access.service';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AbortVideoUploadService } from './uploads/abort-video-upload.service';
     VideoQueueModule,
   ],
   providers: [
+    VideoAccessService,
+    OwnVideosService,
     PublicIdGenerator,
     StartVideoUploadService,
     UploadPartsService,
@@ -28,6 +32,8 @@ import { AbortVideoUploadService } from './uploads/abort-video-upload.service';
   ],
   controllers: [VideosController],
   exports: [
+    VideoAccessService,
+    OwnVideosService,
     StartVideoUploadService,
     UploadPartsService,
     CompleteVideoUploadService,

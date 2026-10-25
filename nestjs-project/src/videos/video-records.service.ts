@@ -44,6 +44,25 @@ export class VideoRecordsService {
     return await manager.getRepository(Video).findOneBy({ id });
   }
 
+  async findOwnedWithSession(publicId: string, userId: string): Promise<Video> {
+    if (!publicId || !userId) throw new VideoNotFoundException();
+    const video = await this.dataSource.getRepository(Video).findOne({
+      where: { public_id: publicId, channel: { user_id: userId } },
+      relations: { upload_session: true },
+      relationLoadStrategy: 'join',
+    });
+    if (!video) throw new VideoNotFoundException();
+    return video;
+  }
+
+  async findAllOwned(userId: string): Promise<Video[]> {
+    if (!userId) return [];
+    return await this.dataSource.getRepository(Video).find({
+      where: { channel: { user_id: userId } },
+      order: { created_at: 'DESC', id: 'DESC' },
+    });
+  }
+
   async createDraft(
     input: CreateVideoRecord,
     manager: EntityManager,
