@@ -23,16 +23,17 @@ Source: `docs/phases/phase-03-videos/phase-03-videos.md` — SI-03.16 acceptance
 #### 1.1. abort-active-session-and-retain-draft
 
 **Covers AC:** #1
-**Source:** auto
-**Last sync:** 2026-10-24T21:35:32Z
+**Source:** manual
+**Last sync:** 2026-10-25T03:00:00Z
 
 **Steps:**
   1. Seed an active unexpired owner upload and its real multipart upload, optionally with uploaded parts. POST /videos/:publicId/upload/abort using its owner's token and no body/query.
      - expect: HTTP 204 with an empty response body.
      - expect: storage multipart upload is aborted and the persisted session becomes aborted.
-  2. GET /videos/:publicId using the same token.
-     - expect: HTTP 200 retains the same video id/public_id in draft state with no new failure reason, and exposes the aborted original session.
+  2. Read the persisted video and upload session for the same publicId.
+     - expect: the same video id/public_id is retained in draft state with no new failure reason, and its original session is aborted with the original deadline.
      - expect: abort did not delete the draft, renew its deadline or create a replacement resumable session.
+     - note: the HTTP projection of an aborted session (GET /videos/:publicId) is owned by `videos-detail.plan.md` scenario 1.5 step 2 (SI-03.21); this scenario must not depend on an endpoint delivered by a later SI (reviewer decision, Implementation revision 2).
 
 #### 1.2. repeat-abort-for-aborted-and-expired-sessions
 

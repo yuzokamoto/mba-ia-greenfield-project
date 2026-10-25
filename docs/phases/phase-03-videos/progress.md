@@ -1,7 +1,7 @@
 # phase-03-videos — Progress
 
 **Status:** in_progress
-**SIs:** 12/27 completed
+**SIs:** 15/27 completed
 
 ### SI-03.1 — Install Dependencies and Prepare the Shared Infrastructure
 - **Status:** completed
@@ -124,19 +124,31 @@
   - Completed the authorized SI-03.8 through SI-03.12 batch and stopped before SI-03.13, as requested. Phase status remains in_progress.
 
 ### SI-03.13 — Implement Serialized Upload Completion
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/uploads/upload-finalization.service.spec.ts src/videos/uploads/upload-finalization.service.integration-spec.ts src/videos/uploads/complete-video-upload.service.spec.ts src/videos/uploads/upload-lifecycle.module.integration-spec.ts` — 37/37 passing, 4/4 suites. `docker compose exec -T nestjs-api npx tsc --noEmit` passed. Batch regression/static results follow SI-03.16.
+- **Observations:**
+  - UploadFinalizationService locks and rechecks the session/video, validates the complete contiguous manifest against actual paginated ETags and exact part sizes, and verifies the completed object's length. Matching objects recover lost S3 responses and the S3-before-DB-commit window. All state writes use owning services and the same manager; completed/processing commits before publication. Repeated completed sessions return current terminal results without new jobs.
+  - Neutral controller-free UploadLifecycleModule exports verified-object/deadline recovery for future worker use without API/AuthModule dependencies. Expired completion never completes unfinished parts; it checks HeadObject, recovers a matching object, or completes required abort/delete cleanup before committing expiry/error. A pre-expiry size mismatch closes the session as aborted and persists processing_failed; expiry uses expired/upload_expired. Rejections are raised after cleanup transitions commit, while unavailable verification/cleanup leaves the decision pending.
+  - CompleteVideoUploadService publishes only after finalization resolves. Recoverable producer unavailability preserves processing intent and emits only a fixed safe deferred-publication diagnostic; unrelated failures propagate. Real Redis disconnect after readiness returned promptly within 3000 ms. No direct ioredis dependency or API consumer was added.
+  - Created src/videos/uploads/upload-finalization.service.ts, upload-finalization.service.spec.ts, upload-finalization.service.integration-spec.ts, upload-lifecycle.module.ts, upload-lifecycle.module.integration-spec.ts, complete-video-upload.service.ts, complete-video-upload.service.spec.ts; src/test/create-upload-lifecycle-test-context.ts and upload-lifecycle-test-data.ts. Updated src/videos/videos.module.ts and src/test/create-video-test-context.ts to own producer readiness/independent test-queue cleanup. All paths are under nestjs-project/.
+  - Clean feature branch and 12/27 committed progress confirmed. Modern Test Specs preflight passed for every reference (no missing/pending specs; 360–361-second plan/spec deltas are within grace). Context7 versions remain TypeORM 0.3.27 versus installed 0.3.28, and AWS SDK v3.1153.0 versus pinned 3.1156.0; installed types and real PostgreSQL/MinIO/Redis verify the shared APIs. Task tools remain unavailable, so this file is the persistent SI checklist. No new dependency or plan-contract change.
 
 ### SI-03.14 — Expose Upload Completion
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm run test:e2e -- --runInBand --forceExit --runTestsByPath test/videos-upload-complete.e2e-spec.ts` — 12/12 passing, 1/1 suite. `docker compose exec -T nestjs-api npx tsc --noEmit` passed; full eslint without --fix passed with 0 errors / 1 existing warning. Batch regressions follow SI-03.16.
+- **Observations:**
+  - Read videos-upload-complete.plan.md in full at JIT authoring time and implemented its exact target with one describe and all 12 named scenarios in order. Tests cover real correctly sized paginated multipart completion with an unsorted manifest, exact 202 projection, malformed/conflicting manifests, controlled final-length rejection/cleanup, established real producer disconnect, terminal-state idempotence, passed-deadline matching-object recovery, ownership/authentication, lost S3 response, pending storage failure and inherited throttling.
+  - Created nestjs-project/src/videos/dto/complete-video-upload.dto.ts and nestjs-project/test/videos-upload-complete.e2e-spec.ts. Updated nestjs-project/src/videos/videos.controller.ts and test/helpers/video-e2e-context.ts for the thin authenticated completion delegate and independent queue cleanup/readiness. The outage scenario owns a separate application/producer so subsequent scenarios retain a ready connection.
+  - Nested DTO validation checks exact part/ETag shape, unknown nested fields, part-number uniqueness and constant-derived bounds. Context7 provides class-validator v0.15.1/develop docs versus installed 0.14.4; ValidateNested/ArrayUnique signatures were checked against installed types and the real HTTP validation suite. No new API, dependency, policy or plan-contract deviation.
 
 ### SI-03.15 — Implement Abort and Deadline Resolution
-- **Status:** pending
-- **Tests:** not run
-- **Observations:** none
+- **Status:** completed
+- **Tests:** `docker compose exec -T nestjs-api npm test -- --runInBand --forceExit --runTestsByPath src/videos/uploads/upload-termination.service.spec.ts src/videos/uploads/upload-termination.service.integration-spec.ts src/videos/uploads/upload-lifecycle.module.integration-spec.ts` — 27/27 passing, 3/3 suites. `docker compose exec -T nestjs-api npx tsc --noEmit` passed. Batch regression/static checks follow SI-03.16.
+- **Observations:**
+  - Added neutral UploadTerminationService entry points for owner-authorized voluntary abort and worker-invoked expiry resolution. Both lock and recheck the session; expiry invokes the same lower-level UploadFinalizationService.resolveDeadlineLocked policy used by completion. Dependency direction remains termination to finalizer, without a cycle or API/queue import into the lifecycle module.
+  - Real PostgreSQL/MinIO tests cover matching completed-object recovery without client retry, wrong-length deletion, absent/incomplete-upload expiry, cleanup failure/retry, draft-preserving repeated abort, completed-object protection/publication and concurrent completion/abort/expiry. Exactly one active-session transition wins, preserving the same identity and a coherent session/video pair.
+  - Created src/videos/uploads/upload-termination.service.ts, upload-termination.service.spec.ts, upload-termination.service.integration-spec.ts and abort-video-upload.service.ts. Updated upload-lifecycle.module.ts and its existing integration test, plus src/videos/videos.module.ts. All paths are under nestjs-project/.
+  - The API-only AbortVideoUploadService publishes recovered completed-object intent after commit and then returns the required conflict; recoverable Redis unavailability preserves that durable result and emits the same bounded diagnostic. Ordinary abort leaves the draft/failure reason intact and does not publish. No replacement session, new failure reason, dependency or plan-contract change was introduced.
 
 ### SI-03.16 — Expose Upload Abort
 - **Status:** pending

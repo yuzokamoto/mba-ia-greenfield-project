@@ -22,6 +22,10 @@ import { User } from '../../src/users/entities/user.entity';
 import { UploadSession } from '../../src/videos/entities/upload-session.entity';
 import { Video } from '../../src/videos/entities/video.entity';
 import { StartVideoUploadService } from '../../src/videos/uploads/start-video-upload.service';
+import {
+  cleanVideoTestQueue,
+  createVideoTestQueue,
+} from '../../src/test/video-test-queue';
 
 export type HttpResponse<T> = Omit<Response, 'body'> & { body: T };
 export interface HttpErrorBody {
@@ -56,6 +60,8 @@ export async function createVideoE2eContext() {
   await app.init();
   const dataSource = app.get(DataSource);
   const client = createVideoTestStorage();
+  const queue = createVideoTestQueue();
+  await queue.waitUntilReady();
   const throttler = app.get<ThrottlerStorageService>(ThrottlerStorage);
   const jwt = app.get(JwtService);
   async function seedUser(withChannel = true) {
@@ -74,6 +80,7 @@ export async function createVideoE2eContext() {
     app,
     dataSource,
     client,
+    queue,
     jwt,
     throttler,
     async storageParts(key: string, uploadId: string) {
@@ -121,6 +128,7 @@ export async function createVideoE2eContext() {
     async clean(): Promise<void> {
       await cleanAllTables(dataSource);
       await cleanVideoTestStorage(client);
+      await cleanVideoTestQueue(queue);
       throttler.storage.clear();
     },
     async close(): Promise<void> {
@@ -128,7 +136,15 @@ export async function createVideoE2eContext() {
         await cleanVideoTestStorage(client);
       } finally {
         client.destroy();
-        await app.close();
+        try {
+          await cleanVideoTestQueue(queue);
+        } finally {
+          try {
+            await app.close();
+          } finally {
+            await queue.close();
+          }
+        }
       }
     },
   };
